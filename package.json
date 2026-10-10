@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:staging": "tsx scripts/staging-roundtrip.ts",
+    "test:staging-auth": "tsx scripts/staging-auth-roundtrip.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",
@@ -22,6 +24,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@prisma/client": "^6.19.3",
     "better-auth": "^1.7.7",
     "next": "16.4.0",
@@ -30,6 +34,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",

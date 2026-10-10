@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import { EmergencyButton } from "@/components/ui/EmergencyButton";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 import { AuthStatusSlot } from "@/components/auth/AuthStatusSlot";
+import { RegisterSW } from "@/components/pwa/RegisterSW";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,6 +21,26 @@ export const metadata: Metadata = {
   title: "Emergency Care — While Help Is on the Way",
   description:
     "Report an emergency and follow safe interim guidance while professional help is arranged.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Emergency Care",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2B0A0A",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -33,6 +54,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-[#FAF6F2] text-[#2A1414]">
+        <RegisterSW />
         <OfflineBanner />
         <header className="bg-gradient-to-r from-[#2B0A0A] to-[#5C1A1A] px-4 py-4 text-white shadow-md">
           <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
@@ -58,7 +80,7 @@ export default function RootLayout({
             </p>
           </footer>
         </div>
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#5C1A1A] bg-white/95 px-4 py-3 backdrop-blur">
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[#5C1A1A] bg-white/95 px-4 pt-3 backdrop-blur">
           <div className="mx-auto max-w-3xl">
             <EmergencyButton />
           </div>
