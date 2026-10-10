@@ -49,7 +49,7 @@ export function ClosePanel({ incidentId }: { incidentId: string }) {
           onChange={(e) => setReason(e.target.value)}
           placeholder="Reason (optional)"
           maxLength={300}
-          className="min-h-[56px] flex-1 rounded-xl border-2 border-zinc-200 px-4 text-lg"
+          className="min-h-[56px] flex-1 rounded-xl border-2 border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-500"
         />
         <button
           type="button"

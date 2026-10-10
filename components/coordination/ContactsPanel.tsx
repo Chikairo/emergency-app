@@ -63,7 +63,7 @@ export function ContactsPanel({
           onChange={(e) => setName(e.target.value)}
           placeholder="Name"
           maxLength={120}
-          className="min-h-[56px] rounded-xl border-2 border-zinc-200 px-4 text-lg"
+          className="min-h-[56px] rounded-xl border-2 border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-500"
         />
         <input
           aria-label="Phone or email"
@@ -71,7 +71,7 @@ export function ContactsPanel({
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Phone or email"
           maxLength={160}
-          className="min-h-[56px] rounded-xl border-2 border-zinc-200 px-4 text-lg"
+          className="min-h-[56px] rounded-xl border-2 border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-500"
         />
       </div>
       <label className="mt-2 flex min-h-[48px] items-center gap-3 text-lg">

@@ -55,7 +55,7 @@ export function LocationForm({ id }: { id: string }) {
         onChange={(e) => setLandmark(e.target.value)}
         placeholder="e.g. Blue kiosk opposite the market"
         maxLength={300}
-        className="mt-1 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 px-4 text-xl"
+        className="mt-1 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-xl text-zinc-900 placeholder:text-zinc-500"
       />
       <button
         type="button"

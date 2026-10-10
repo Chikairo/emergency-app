@@ -56,9 +56,9 @@ export default function ReportPage() {
         />
       )}
 
-      <fieldset className="rounded-2xl bg-white p-5 shadow-sm">
-        <legend className="px-1 text-xl font-bold">Who is this for?</legend>
-        <div className="mt-2 grid grid-cols-2 gap-3">
+      <div className="rounded-2xl bg-white p-5 shadow-sm" role="radiogroup" aria-labelledby="who-label">
+        <p id="who-label" className="text-xl font-bold">Who is this for?</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
           {(
             [
               { label: "Myself", value: true },
@@ -80,7 +80,7 @@ export default function ReportPage() {
             </button>
           ))}
         </div>
-      </fieldset>
+      </div>
 
       <div className="rounded-2xl bg-white p-5 shadow-sm">
         <label htmlFor="etype" className="text-xl font-bold">
@@ -92,7 +92,7 @@ export default function ReportPage() {
           onChange={(e) => setEmergencyType(e.target.value)}
           placeholder="e.g. Severe bleeding"
           maxLength={120}
-          className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 px-4 text-xl"
+          className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-xl text-zinc-900 placeholder:text-zinc-500"
         />
         <label htmlFor="triage1" className="mt-4 block text-xl font-bold">
           Anything else that helps? <span className="font-normal text-zinc-500">(optional)</span>
@@ -103,7 +103,7 @@ export default function ReportPage() {
           onChange={(e) => setQ1(e.target.value)}
           placeholder="e.g. Person is awake and breathing"
           maxLength={500}
-          className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 px-4 text-xl"
+          className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-xl text-zinc-900 placeholder:text-zinc-500"
         />
       </div>
 

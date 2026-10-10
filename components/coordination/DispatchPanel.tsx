@@ -57,7 +57,7 @@ export function DispatchPanel({
             value={targetName}
             onChange={(e) => setTargetName(e.target.value)}
             maxLength={120}
-            className="min-h-[56px] flex-1 rounded-xl border-2 border-zinc-200 px-4 text-lg"
+            className="min-h-[56px] flex-1 rounded-xl border-2 border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-500"
           />
           <button
             type="button"

@@ -62,6 +62,16 @@ export default async function IncidentPage({
       )}
 
       <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="text-2xl font-bold">Contact help</h2>
+        <p className="mt-1 text-base text-zinc-600">
+          Online contact is mocked here. In a real emergency, call your local emergency number directly.
+        </p>
+        <div className="mt-2">
+          <MarkSentButton id={incident.id} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
         <h2 className="text-2xl font-bold">Location</h2>
         <p className="mt-1 text-lg text-zinc-600">
           Current: {incident.location?.landmark ?? incident.location?.locationState ?? "not set"}.
@@ -70,11 +80,6 @@ export default async function IncidentPage({
         <div className="mt-2">
           <LocationForm id={incident.id} />
         </div>
-      </section>
-
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
-        <h2 className="text-2xl font-bold">Contact help</h2>
-        <MarkSentButton id={incident.id} />
       </section>
 
       <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Incident timeline">

@@ -43,7 +43,7 @@ export default function RootLayout({
             </span>
           </div>
         </header>
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6 pb-28">
           <main className="flex flex-1 flex-col gap-6">{children}</main>
           <footer className="rounded-2xl bg-[#2B1212] p-5 text-base text-red-50">
             <p className="font-semibold">Emergency Care — demo build (mock services).</p>
@@ -53,7 +53,7 @@ export default function RootLayout({
             </p>
           </footer>
         </div>
-        <div className="sticky bottom-0 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#5C1A1A] bg-white/95 px-4 py-3 backdrop-blur">
           <div className="mx-auto max-w-3xl">
             <EmergencyButton />
           </div>

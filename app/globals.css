@@ -3,6 +3,17 @@
 :root {
   --background: #faf6f2;
   --foreground: #2a1414;
+  color-scheme: light;
+}
+
+::placeholder {
+  color: #78716c;
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 3px solid #7f1d1d;
+  outline-offset: 2px;
 }
 
 @theme inline {
