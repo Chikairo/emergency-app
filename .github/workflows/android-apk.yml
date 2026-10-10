@@ -1,10 +1,4 @@
-# Builds a debug Android APK with Capacitor (no local SDK needed).
-# The app shell loads the deployed public backend over HTTPS; nothing is
-# bundled except a static fallback page. No secrets are used or logged:
-# the build needs no .env, database, or credentials of any kind.
-#
-# Run: Actions tab -> "Android APK (debug)" -> Run workflow -> download
-# the `emergency-care-debug-apk` artifact (app-debug.apk inside).
+
 name: Android APK (debug)
 
 on:
@@ -13,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -30,14 +25,14 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install platform and build tools
+      - name: Install Android SDK packages
         run: |
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Add Android platform
         run: npx cap add android
