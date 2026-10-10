@@ -1,0 +1,31 @@
+# Node
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Env (never commit real secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Prisma
+/prisma/migrations/migration_lock.toml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test / Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+*.log
+
+# Docker / local data (keep compose file, ignore data volumes)
+/data/
