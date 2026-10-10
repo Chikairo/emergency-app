@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { assertTransition } from "./status";
 import type { IncidentStatus } from "./status";
+import { classifyUrgency } from "@/modules/triage/flow";
+import { submitTriageSchema } from "@/modules/triage/validation";
 import { locationSchema, reportIncidentSchema } from "./validation";
 import type {
   AppendStatusOptions,
@@ -36,6 +38,10 @@ export class MemoryIncidentStore implements IncidentStore {
       emergencyType: input.emergencyType,
       affectsSelf: input.affectsSelf,
       triage: input.triage,
+      triageResults: [],
+      urgency: null,
+      urgencyBasis: [],
+      rulesetVersion: null,
       status: "REQUEST_STARTED",
       location: null,
       regionCode: "pilot-mock",
@@ -101,5 +107,46 @@ export class MemoryIncidentStore implements IncidentStore {
   /** Test/dev helper: number of stored incidents. */
   get size(): number {
     return this.incidents.size;
+  }
+
+  submitTriage(
+    id: string,
+    raw: unknown,
+    opts: { source: string },
+  ): { incident: IncidentRecord; urgency: string; basis: string[] } {
+    const record = this.incidents.get(id);
+    if (!record) throw notFoundError(id);
+    const input = submitTriageSchema.parse(raw);
+    const key = `${id}:triage:${input.idempotencyKey}`;
+    // Idempotent replay: return current classification without duplicating.
+    if (this.eventKeys.has(key)) {
+      return {
+        incident: record,
+        urgency: record.urgency ?? "UNKNOWN",
+        basis: record.urgencyBasis,
+      };
+    }
+    const now = new Date();
+    const merged: Record<string, string> = {};
+    for (const t of record.triageResults) merged[t.questionId] = t.answer;
+    for (const a of input.answers) {
+      merged[a.questionId] = a.answer;
+      record.triageResults.push({
+        questionId: a.questionId,
+        answer: a.answer,
+        note: a.note,
+        source: opts.source,
+        at: now,
+      });
+    }
+    const classified = classifyUrgency(
+      merged as Partial<Record<string, "yes" | "no" | "unsure" | "skipped">>,
+    );
+    record.urgency = classified.urgency;
+    record.urgencyBasis = classified.basis;
+    record.rulesetVersion = classified.rulesetVersion;
+    record.updatedAt = now;
+    this.eventKeys.add(key);
+    return { incident: record, urgency: classified.urgency, basis: classified.basis };
   }
 }

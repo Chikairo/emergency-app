@@ -1,45 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { FailureBanner } from "@/components/ui/FailureBanner";
 
+function newKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `web-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+}
+
+// True only after client hydration: the help button stays disabled until
+// taps can actually reach the handler (no dead pre-hydration clicks).
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export default function ReportPage() {
   const router = useRouter();
+  const mounted = useMounted();
   const [affectsSelf, setAffectsSelf] = useState(true);
   const [emergencyType, setEmergencyType] = useState("");
-  const [q1, setQ1] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Retry key: created in the tap handler (never during render), reused across
+  // retries so double-taps can't fork incidents. Cleared after failures.
+  const keyRef = useRef<string | null>(null);
 
-  async function submit(skipTriage: boolean) {
+  async function createNow() {
     setPending(true);
     setError(null);
+    if (keyRef.current === null) keyRef.current = newKey();
     try {
       const res = await fetch("/api/incidents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           affectsSelf,
-          emergencyType: emergencyType || "Unspecified emergency",
-          triage: skipTriage
-            ? []
-            : [
-                ...(q1 ? [{ question: "What happened?", answer: q1 }] : []),
-              ],
-          idempotencyKey:
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : `web-${Date.now()}`,
+          emergencyType: emergencyType.trim() || "Unspecified emergency",
+          triage: [],
+          idempotencyKey: keyRef.current,
         }),
       });
       const data = (await res.json()) as { incident?: { id: string }; error?: string };
       if (!res.ok || !data.incident) {
-        throw new Error(data.error ?? "Could not start the report. Nothing was sent.");
+        throw new Error(data.error ?? "Could not save the report. Nothing was sent.");
       }
       router.push(`/incidents/${data.incident.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start the report.");
+      // New key only after a confirmed failure, so a retry is a new attempt.
+      keyRef.current = newKey();
+      setError(e instanceof Error ? e.message : "Could not save the report.");
     } finally {
       setPending(false);
     }
@@ -47,17 +62,27 @@ export default function ReportPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-3xl font-bold">Report an emergency</h1>
+      <h1 className="text-3xl font-bold">Get emergency help</h1>
+      <p className="text-xl leading-8 text-zinc-700">
+        One tap creates your report and shows guidance plus help options immediately.
+        Details can follow — nothing here delays help.
+      </p>
 
-      {error && (
-        <FailureBanner
-          title="Report not sent"
-          detail={error}
-        />
-      )}
+      {error && <FailureBanner title="Report not saved" detail={error} />}
+
+      <button
+        type="button"
+        disabled={pending || !mounted}
+        onClick={createNow}
+        className="min-h-[80px] rounded-2xl bg-[#C81E1E] px-8 text-3xl font-bold text-white shadow-lg hover:bg-[#A61717] disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Get Emergency Help"}
+      </button>
 
       <div className="rounded-2xl bg-white p-5 shadow-sm" role="radiogroup" aria-labelledby="who-label">
-        <p id="who-label" className="text-xl font-bold">Who is this for?</p>
+        <p id="who-label" className="text-xl font-bold">
+          Who is this for? <span className="font-normal text-zinc-500">(optional)</span>
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {(
             [
@@ -80,10 +105,7 @@ export default function ReportPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-5 shadow-sm">
-        <label htmlFor="etype" className="text-xl font-bold">
+        <label htmlFor="etype" className="mt-4 block text-xl font-bold">
           What is happening? <span className="font-normal text-zinc-500">(optional)</span>
         </label>
         <input
@@ -94,37 +116,12 @@ export default function ReportPage() {
           maxLength={120}
           className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-xl text-zinc-900 placeholder:text-zinc-500"
         />
-        <label htmlFor="triage1" className="mt-4 block text-xl font-bold">
-          Anything else that helps? <span className="font-normal text-zinc-500">(optional)</span>
-        </label>
-        <input
-          id="triage1"
-          value={q1}
-          onChange={(e) => setQ1(e.target.value)}
-          placeholder="e.g. Person is awake and breathing"
-          maxLength={500}
-          className="mt-2 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-xl text-zinc-900 placeholder:text-zinc-500"
-        />
       </div>
 
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => submit(false)}
-        className="min-h-[64px] rounded-2xl bg-[#7F1D1D] px-8 text-2xl font-bold text-white hover:bg-[#651414] disabled:opacity-50"
-      >
-        {pending ? "Sending…" : "Send report"}
-      </button>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => submit(true)}
-        className="min-h-[56px] rounded-2xl border-2 border-[#C81E1E] px-8 text-xl font-bold text-[#C81E1E]"
-      >
-        Skip questions — get help now
-      </button>
       <p className="text-lg text-zinc-600">
-        Sending creates a local report only. It does not contact real emergency services.
+        After tapping, you can answer a few quick voice or tap questions, confirm your location,
+        and track real status. Sending creates a local report only — it does not contact real
+        emergency services.
       </p>
     </div>
   );

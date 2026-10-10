@@ -8,6 +8,7 @@ import { ContactsPanel } from "@/components/coordination/ContactsPanel";
 import { DispatchPanel } from "@/components/coordination/DispatchPanel";
 import { MedproPanel } from "@/components/coordination/MedproPanel";
 import { RespondersPanel } from "@/components/coordination/RespondersPanel";
+import { VoiceTriage } from "@/components/triage/VoiceTriage";
 import { coordinationStore } from "@/lib/coordination-store";
 import { incidentStore } from "@/lib/incident-store";
 import { getBundle } from "@/modules/guidance/bundles";
@@ -68,6 +69,17 @@ export default async function IncidentPage({
         </p>
         <div className="mt-2">
           <MarkSentButton id={incident.id} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Quick questions">
+        <h2 className="text-2xl font-bold">Quick questions</h2>
+        <p className="mt-1 text-base text-zinc-600">
+          Optional — answer aloud or tap. Short questions only; skip anything. Current assessment:{" "}
+          <strong>{incident.urgency ?? "not assessed yet"}</strong>.
+        </p>
+        <div className="mt-3">
+          <VoiceTriage incidentId={incident.id} />
         </div>
       </section>
 

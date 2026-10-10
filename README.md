@@ -65,9 +65,11 @@ registry). Re-evaluate before upgrading.
 
 ## Scripts
 
-`dev`, `build`, `start`, `lint`, `typecheck` — use `npm.cmd` on Windows if
-`npm.ps1` is blocked. `test` / `test:e2e`, `db:migrate`, `db:seed`,
-`db:reset` land with the database + test setup (next increments).
+`dev`, `build`, `start`, `lint`, `typecheck`, `test` (Vitest), `test:e2e`
+(Playwright — first run needs `npx playwright install chromium`, free
+open-source browsers) — use `npm.cmd` on Windows if `npm.ps1` is blocked.
+`db:migrate`, `db:seed`, `db:reset` need a live database (Docker engine or
+native Postgres; both pending on this machine).
 
 ## Decisions needed from you (Phase 0 blockers)
 

@@ -15,12 +15,24 @@ export interface StatusEventRecord {
   at: Date;
 }
 
+export interface TriageResultRecord {
+  questionId: string;
+  answer: string;
+  note?: string;
+  source: string; // voice | tap | form
+  at: Date;
+}
+
 export interface IncidentRecord {
   id: string;
   reporter: string | null;
   emergencyType: string;
   affectsSelf: boolean;
   triage: { question: string; answer: string }[];
+  triageResults: TriageResultRecord[];
+  urgency: string | null;
+  urgencyBasis: string[];
+  rulesetVersion: string | null;
   status: IncidentStatus;
   location: LocationInput | null;
   regionCode: string;
@@ -42,6 +54,11 @@ export interface IncidentStore {
   listIncidents(): IncidentRecord[];
   updateLocation(id: string, location: LocationInput): IncidentRecord;
   appendStatus(id: string, to: IncidentStatus, opts: AppendStatusOptions): IncidentRecord;
+  submitTriage(
+    id: string,
+    raw: unknown,
+    opts: { source: string },
+  ): { incident: IncidentRecord; urgency: string; basis: string[] };
 }
 
 export function notFoundError(id: string): Error {
