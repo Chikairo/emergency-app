@@ -72,7 +72,7 @@ export default function ReportPage() {
               onClick={() => setAffectsSelf(opt.value)}
               className={`min-h-[56px] rounded-xl border-2 px-4 text-xl font-semibold ${
                 affectsSelf === opt.value
-                  ? "border-[#1D4ED8] bg-blue-50 text-blue-900"
+                  ? "border-[#7F1D1D] bg-[#FBEAEA] text-[#5B1414]"
                   : "border-zinc-200 bg-white text-zinc-700"
               }`}
             >
@@ -111,7 +111,7 @@ export default function ReportPage() {
         type="button"
         disabled={pending}
         onClick={() => submit(false)}
-        className="min-h-[64px] rounded-2xl bg-[#1D4ED8] px-8 text-2xl font-bold text-white disabled:opacity-50"
+        className="min-h-[64px] rounded-2xl bg-[#7F1D1D] px-8 text-2xl font-bold text-white hover:bg-[#651414] disabled:opacity-50"
       >
         {pending ? "Sending…" : "Send report"}
       </button>

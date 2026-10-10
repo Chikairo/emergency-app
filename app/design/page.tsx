@@ -20,9 +20,11 @@ export default function DesignPage() {
       <div>
         <h1 className="text-3xl font-bold">Design system</h1>
         <p className="mt-1 text-lg text-zinc-600">
-          Urgency-first tokens: danger <span className="font-mono">#C81E1E</span> for the emergency
-          action only; 56px+ touch targets; base 16px, guidance at 20px+; status never by colour
-          alone — every pill pairs colour with an icon and plain-language label.
+          Urgency-first tokens: warm paper background, deep maroon header/footer, dark-red
+          (<span className="font-mono">#7F1D1D</span>) actions on white cards; bright red
+          (<span className="font-mono">#C81E1E</span>) reserved for the emergency action and
+          Do-not warnings only. 56px+ touch targets; base 16px, guidance at 20px+; status never
+          by colour alone — every pill pairs colour with an icon and plain-language label.
         </p>
       </div>
 

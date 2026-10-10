@@ -3,6 +3,12 @@ import { GuidanceStep } from "@/components/ui/GuidanceStep";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { LocationForm } from "@/components/incidents/LocationForm";
 import { MarkSentButton } from "@/components/incidents/MarkSentButton";
+import { ClosePanel } from "@/components/coordination/ClosePanel";
+import { ContactsPanel } from "@/components/coordination/ContactsPanel";
+import { DispatchPanel } from "@/components/coordination/DispatchPanel";
+import { MedproPanel } from "@/components/coordination/MedproPanel";
+import { RespondersPanel } from "@/components/coordination/RespondersPanel";
+import { coordinationStore } from "@/lib/coordination-store";
 import { incidentStore } from "@/lib/incident-store";
 import { getBundle } from "@/modules/guidance/bundles";
 
@@ -23,6 +29,12 @@ export default async function IncidentPage({
 
   const slug = /bleed/i.test(incident.emergencyType) ? "sample-bleeding" : "sample-choking";
   const guidance = getBundle(slug);
+  const dispatches = coordinationStore.listDispatches(id);
+  const medpros = coordinationStore.listMedpro(id);
+  const assignments = coordinationStore.listAssignments(id);
+  const contacts = coordinationStore.listContacts(id);
+  const closed =
+    incident.status === "COMPLETED_HANDED_OVER" || incident.status === "CANCELLED";
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,6 +93,54 @@ export default async function IncidentPage({
           ))}
         </ol>
       </section>
+
+      {!closed && (
+        <>
+          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Dispatch coordination">
+            <h2 className="text-2xl font-bold">Dispatch coordination</h2>
+            <p className="mt-1 text-base text-zinc-600">
+              Mock partners only. A request is SENT until the named service confirms — never assume dispatch.
+            </p>
+            <div className="mt-2">
+              <DispatchPanel incidentId={incident.id} initial={dispatches} />
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Medical professional">
+            <h2 className="text-2xl font-bold">Medical professional</h2>
+            <p className="mt-1 text-base text-zinc-600">
+              Mock queue. Pending means nobody connected — keep following the guidance above.
+            </p>
+            <div className="mt-2">
+              <MedproPanel incidentId={incident.id} initial={medpros} />
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Nearby responders">
+            <h2 className="text-2xl font-bold">Nearby responders</h2>
+            <div className="mt-2">
+              <RespondersPanel incidentId={incident.id} initial={assignments} />
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Trusted contacts">
+            <h2 className="text-2xl font-bold">Trusted contacts</h2>
+            <p className="mt-1 text-base text-zinc-600">
+              Only consented contacts are notified, with minimum necessary detail.
+            </p>
+            <div className="mt-2">
+              <ContactsPanel incidentId={incident.id} initial={contacts} />
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Close incident">
+            <h2 className="text-2xl font-bold">Close incident</h2>
+            <div className="mt-2">
+              <ClosePanel incidentId={incident.id} />
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

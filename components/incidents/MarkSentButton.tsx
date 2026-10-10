@@ -40,7 +40,7 @@ export function MarkSentButton({ id }: { id: string }) {
     <div>
       {error && <FailureBanner title="Something failed" detail={error} />}
       {notice && (
-        <div role="status" className="mb-3 rounded-xl border border-blue-300 bg-blue-50 p-4 text-lg text-blue-900">
+        <div role="status" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-lg text-amber-900">
           {notice}
         </div>
       )}
@@ -48,7 +48,7 @@ export function MarkSentButton({ id }: { id: string }) {
         type="button"
         disabled={busy}
         onClick={markSent}
-        className="mt-2 min-h-[56px] rounded-xl bg-[#1D4ED8] px-6 text-xl font-bold text-white disabled:opacity-50"
+        className="mt-2 min-h-[56px] rounded-xl bg-[#7F1D1D] px-6 text-xl font-bold text-white hover:bg-[#651414] disabled:opacity-50"
       >
         I called for help (record it)
       </button>

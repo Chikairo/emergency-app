@@ -5,6 +5,17 @@ import { GET as getOne } from "@/app/api/incidents/[id]/route";
 import { PATCH as setLocation } from "@/app/api/incidents/[id]/location/route";
 import { POST as setStatus } from "@/app/api/incidents/[id]/status/route";
 import { GET as guidance } from "@/app/api/guidance/route";
+import { POST as requestDispatch } from "@/app/api/incidents/[id]/dispatch/route";
+import { POST as dispatchAck } from "@/app/api/dispatch/[reqId]/ack/route";
+import { POST as dispatchConfirm } from "@/app/api/dispatch/[reqId]/confirm/route";
+import { POST as requestMedpro } from "@/app/api/incidents/[id]/medpro/route";
+import { POST as medproAccept } from "@/app/api/medpro/[reqId]/accept/route";
+import { GET as roster } from "@/app/api/responders/route";
+import { POST as assign } from "@/app/api/incidents/[id]/assign/route";
+import { POST as assignmentAck } from "@/app/api/assignments/[aid]/ack/route";
+import { POST as addContact } from "@/app/api/incidents/[id]/contacts/route";
+import { POST as notify } from "@/app/api/incidents/[id]/notify/route";
+import { POST as close } from "@/app/api/incidents/[id]/close/route";
 
 function jsonRequest(url: string, method: string, body: unknown): Request {
   return new Request(url, {
@@ -103,5 +114,146 @@ describe("emergency API (mock integrations, honest states)", () => {
       { nextUrl: new URL("http://localhost/api/guidance?slug=nope") } as any,
     );
     expect(missing.status).toBe(404);
+  });
+});
+
+describe("coordination API (Phase 2, mock providers)", () => {
+  async function makeIncident(key: string): Promise<string> {
+    const res = await create(
+      jsonRequest("http://localhost/api/incidents", "POST", {
+        affectsSelf: false,
+        emergencyType: "Test emergency",
+        idempotencyKey: key,
+      }),
+    );
+    const { incident } = (await res.json()) as { incident: { id: string } };
+    return incident.id;
+  }
+
+  const p = (id: string) => ({ params: Promise.resolve({ id }) });
+
+  it("dispatch stays SENT until mock ack then confirm, in order", async () => {
+    const id = await makeIncident("coord-dispatch-1");
+    const created = await requestDispatch(
+      jsonRequest("http://localhost/d", "POST", {
+        targetType: "ambulance-partner",
+        targetName: "Mock Ambulance Co.",
+        idempotencyKey: "coord-d-key-1",
+      }),
+      p(id),
+    );
+    expect(created.status).toBe(201);
+    const { dispatch } = (await created.json()) as { dispatch: { id: string; state: string; simulated: boolean } };
+    expect(dispatch.state).toBe("SENT");
+    expect(dispatch.simulated).toBe(false);
+
+    const early = await dispatchConfirm(new Request("http://localhost/c", { method: "POST" }), {
+      params: Promise.resolve({ reqId: dispatch.id }),
+    });
+    expect(early.status).toBe(422);
+
+    const acked = await dispatchAck(new Request("http://localhost/a", { method: "POST" }), {
+      params: Promise.resolve({ reqId: dispatch.id }),
+    });
+    expect((await acked.json() as { dispatch: { simulated: boolean } }).dispatch.simulated).toBe(true);
+    const confirmed = await dispatchConfirm(new Request("http://localhost/c", { method: "POST" }), {
+      params: Promise.resolve({ reqId: dispatch.id }),
+    });
+    expect(confirmed.status).toBe(200);
+  });
+
+  it("med-pro request starts PENDING and accepts via mock", async () => {
+    const id = await makeIncident("coord-medpro-1");
+    const created = await requestMedpro(
+      jsonRequest("http://localhost/m", "POST", { idempotencyKey: "coord-m-key-1" }),
+      p(id),
+    );
+    expect(created.status).toBe(201);
+    const { medpro } = (await created.json()) as { medpro: { id: string; state: string; provider: string } };
+    expect(medpro.state).toBe("PENDING");
+    expect(medpro.provider).toBe("mock");
+    const accepted = await medproAccept(new Request("http://localhost/ma", { method: "POST" }), {
+      params: Promise.resolve({ reqId: medpro.id }),
+    });
+    expect(accepted.status).toBe(200);
+  });
+
+  it("only verified responders can be assigned; ack works", async () => {
+    const id = await makeIncident("coord-resp-1");
+    const list = await roster();
+    const { responders } = (await list.json()) as { responders: { email: string; verified: boolean }[] };
+    expect(responders.length).toBeGreaterThan(0);
+
+    const denied = await assign(
+      jsonRequest("http://localhost/as", "POST", {
+        responderEmail: "unverified.vol@example.com",
+        idempotencyKey: "coord-a-deny-1",
+      }),
+      p(id),
+    );
+    expect(denied.status).toBe(422);
+
+    const allowed = await assign(
+      jsonRequest("http://localhost/as", "POST", {
+        responderEmail: "responder@example.com",
+        idempotencyKey: "coord-a-ok-1",
+      }),
+      p(id),
+    );
+    expect(allowed.status).toBe(201);
+    const { assignment } = (await allowed.json()) as { assignment: { id: string } };
+    const acked = await assignmentAck(new Request("http://localhost/aa", { method: "POST" }), {
+      params: Promise.resolve({ aid: assignment.id }),
+    });
+    expect(acked.status).toBe(200);
+  });
+
+  it("trusted contacts need consent; notify records SENT", async () => {
+    const id = await makeIncident("coord-contact-1");
+    const noConsent = await addContact(
+      jsonRequest("http://localhost/c", "POST", {
+        name: "Ama",
+        channel: "SMS",
+        address: "+000-111-2222",
+      }),
+      p(id),
+    );
+    expect(noConsent.status).toBe(400);
+    const added = await addContact(
+      jsonRequest("http://localhost/c", "POST", {
+        name: "Ama",
+        channel: "SMS",
+        address: "+000-111-2222",
+        consent: true,
+      }),
+      p(id),
+    );
+    expect(added.status).toBe(201);
+    const sent = await notify(new Request("http://localhost/n", { method: "POST" }), p(id));
+    const { notifications } = (await sent.json()) as { notifications: { state: string }[] };
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.state).toBe("SENT");
+  });
+
+  it("closure follows transition rules (terminal states enforced)", async () => {
+    const id = await makeIncident("coord-close-1");
+    // Cannot complete straight from REQUEST_STARTED.
+    const early = await close(
+      jsonRequest("http://localhost/cl", "POST", {
+        outcome: "completed",
+        idempotencyKey: "coord-cl-early",
+      }),
+      p(id),
+    );
+    expect(early.status).toBe(422);
+    const cancelled = await close(
+      jsonRequest("http://localhost/cl", "POST", {
+        outcome: "cancelled",
+        reason: "Duplicate report",
+        idempotencyKey: "coord-cl-ok-1",
+      }),
+      p(id),
+    );
+    expect(cancelled.status).toBe(200);
   });
 });

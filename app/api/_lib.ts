@@ -14,6 +14,10 @@ export function toErrorResponse(error: unknown): Response {
   if (error instanceof Error && /not found/i.test(error.message)) {
     return Response.json({ error: error.message }, { status: 404 });
   }
+  if (error instanceof Error) {
+    // Domain rule violations (bad state, unverified responder, etc.)
+    return Response.json({ error: error.message }, { status: 422 });
+  }
   return Response.json({ error: "Something went wrong" }, { status: 500 });
 }
 

@@ -30,13 +30,24 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900">
+      <body className="flex min-h-full flex-col bg-[#FAF6F2] text-[#2A1414]">
         <OfflineBanner />
+        <header className="bg-gradient-to-r from-[#2B0A0A] to-[#5C1A1A] px-4 py-4 text-white shadow-md">
+          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
+            <div>
+              <p className="text-2xl font-bold leading-7">Emergency Care</p>
+              <p className="text-base text-red-100">While help is on the way · demo build (mock services)</p>
+            </div>
+            <span className="rounded-full border border-red-200/50 px-3 py-1 text-sm font-semibold text-red-100">
+              MOCK
+            </span>
+          </div>
+        </header>
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
           <main className="flex flex-1 flex-col gap-6">{children}</main>
-          <footer className="border-t border-zinc-200 pt-4 text-base text-zinc-600">
+          <footer className="rounded-2xl bg-[#2B1212] p-5 text-base text-red-50">
             <p className="font-semibold">Emergency Care — demo build (mock services).</p>
-            <p>
+            <p className="mt-1">
               Not a replacement for emergency numbers or hospitals. Always call your local
               emergency number directly in a real emergency.
             </p>

@@ -39,6 +39,7 @@ export interface AppendStatusOptions {
 export interface IncidentStore {
   createIncident(input: ReportIncidentInput, opts: { reporter?: string | null }): IncidentRecord;
   getIncident(id: string): IncidentRecord | null;
+  listIncidents(): IncidentRecord[];
   updateLocation(id: string, location: LocationInput): IncidentRecord;
   appendStatus(id: string, to: IncidentStatus, opts: AppendStatusOptions): IncidentRecord;
 }

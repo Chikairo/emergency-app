@@ -42,7 +42,7 @@ export function LocationForm({ id }: { id: string }) {
     <div>
       {error && <FailureBanner title="Something failed" detail={error} />}
       {notice && (
-        <div role="status" className="mb-3 rounded-xl border border-blue-300 bg-blue-50 p-4 text-lg text-blue-900">
+        <div role="status" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-lg text-amber-900">
           {notice}
         </div>
       )}

@@ -71,7 +71,7 @@ Urgency first, clarity over assumptions, plain language, minimal typing, large t
 
 ### 3.2 Tokens (v1)
 
-- **Color:** High-contrast semantic palette. `Danger #C81E1E` (emergency CTA only), `Safe #0E7C3E`, `Warning #B45309`, `Info #1D4ED8`, neutrals with ≥4.5:1 body contrast. Status colors never rely on color alone — always paired with label + icon.
+- **Color:** Dark-red/brown + white theme. Surfaces: deep maroon gradient `#2B0A0A → #5C1A1A` (header), `#2B1212` (footer), warm paper `#FAF6F2` (page), white cards. Actions: dark red `#7F1D1D` (hover `#651414`); bright `Danger #C81E1E` reserved for the emergency CTA and Do-not warnings only. `Safe #0E7C3E`, `Warning #B45309` stay semantic. Status colors never rely on color alone — always paired with label + icon.
 - **Typography:** System stack or Inter; base 16px minimum, 20px+ for guidance steps; line-height 1.5; plain-language lint (≤8th-grade reading level for P0 flows).
 - **Spacing/radius:** 8pt grid; 12px+ radius on cards; 56px+ primary buttons; 48px minimum touch target.
 - **Motion:** None blocking; status changes announced via aria-live, no auto-play.

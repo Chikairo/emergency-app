@@ -21,11 +21,17 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-3">
         <Link href="/guidance" className="rounded-2xl bg-white p-5 shadow-sm hover:shadow">
           <p className="text-xl font-bold">First-aid guidance</p>
           <p className="mt-1 text-lg text-zinc-600">
             Saved, versioned interim steps. Sample content — not clinically reviewed.
+          </p>
+        </Link>
+        <Link href="/ops" className="rounded-2xl bg-white p-5 shadow-sm hover:shadow">
+          <p className="text-xl font-bold">Operations</p>
+          <p className="mt-1 text-lg text-zinc-600">
+            All reports with failed handoffs surfaced first.
           </p>
         </Link>
         <Link href="/design" className="rounded-2xl bg-white p-5 shadow-sm hover:shadow">

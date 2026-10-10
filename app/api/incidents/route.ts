@@ -1,5 +1,9 @@
 import { getStore, toErrorResponse } from "../_lib";
 
+export async function GET() {
+  return Response.json({ incidents: getStore().listIncidents() });
+}
+
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();

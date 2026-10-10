@@ -61,6 +61,12 @@ export class MemoryIncidentStore implements IncidentStore {
     return this.incidents.get(id) ?? null;
   }
 
+  listIncidents(): IncidentRecord[] {
+    return [...this.incidents.values()].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+  }
+
   updateLocation(id: string, raw: unknown): IncidentRecord {
     const record = this.incidents.get(id);
     if (!record) throw notFoundError(id);
