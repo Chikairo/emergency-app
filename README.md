@@ -48,10 +48,11 @@ in development. No paid SaaS required to run locally.
 - Mock only: SMS, calls, maps tiles, dispatch, hospital, medical-pro. Real
   provider connections require written approval + contracts (per PRD).
 
-## Scripts (to be added with scaffold)
+## Scripts
 
-`dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e`, `db:migrate`,
-`db:seed`, `db:reset`.
+`dev`, `build`, `start`, `lint`, `typecheck` — use `npm.cmd` on Windows if
+`npm.ps1` is blocked. `test` / `test:e2e`, `db:migrate`, `db:seed`,
+`db:reset` land with the database + test setup (next increments).
 
 ## Decisions needed from you (Phase 0 blockers)
 

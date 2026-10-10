@@ -26,6 +26,14 @@ Thumbs.db
 /playwright-report/
 /playwright/.cache/
 *.log
+*.tsbuildinfo
+
+# vercel
+.vercel
+
+# misc
+*.pem
+next-env.d.ts
 
 # Docker / local data (keep compose file, ignore data volumes)
 /data/
