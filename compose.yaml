@@ -1,0 +1,29 @@
+# Local PostgreSQL + PostGIS. Free, open-source, no cloud required.
+# Usage (Docker Desktop must be running):
+#   docker compose up -d        # start
+#   docker compose down         # stop (data kept in pgdata volume)
+#   docker compose down -v      # stop + wipe data
+name: emergency-app
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: emergency-app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: emergency
+      POSTGRES_PASSWORD: emergency
+      POSTGRES_DB: emergency
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emergency -d emergency"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:

@@ -1,0 +1,411 @@
+// Emergency Care platform — database schema (PostgreSQL + PostGIS).
+// Fictional seed data only. No real patient information.
+// Geographic columns use PostGIS `geography`; plain lat/lng mirrors support
+// environments without the extension. Enable via: CREATE EXTENSION postgis;
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------- roles ---
+enum Role {
+  PATIENT
+  BYSTANDER
+  RESPONDER
+  MEDICAL_PROFESSIONAL
+  DISPATCHER
+  HOSPITAL_ADMIN
+  SYSTEM_ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REVOKED
+  EXPIRED
+}
+
+enum IncidentStatus {
+  REQUEST_STARTED
+  REQUEST_SENT
+  ACKNOWLEDGED
+  DISPATCHED_ACCEPTED
+  EN_ROUTE
+  ARRIVED
+  COMPLETED_HANDED_OVER
+  UNABLE_TO_CONFIRM
+  CANCELLED
+}
+
+enum FacilityType {
+  HOSPITAL
+  DISPATCH_CENTER
+  AMBULANCE_BASE
+}
+
+enum GuidanceStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+enum RequestState {
+  PENDING
+  SENT
+  ACKNOWLEDGED
+  ACCEPTED
+  DECLINED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+}
+
+enum DeliveryState {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+// ------------------------------------------------------- auth (Better Auth)
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(BYSTANDER)
+  facilityId    String?
+  facility      Facility? @relation(fields: [facilityId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions          Session[]
+  accounts          Account[]
+  reportedIncidents Incident[]        @relation("ReportedBy")
+  statusEvents      StatusEvent[]     @relation("ActedBy")
+  responderProfile  ResponderProfile?
+  trustedContacts   TrustedContact[]  @relation("OwnerContacts")
+  auditEntries      AuditLog[]        @relation("AuditActor")
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// -------------------------------------------------------------- facilities
+model Facility {
+  id             String                                 @id @default(cuid())
+  type           FacilityType
+  name           String
+  capabilities   String[]                               @default([])
+  availability   String                                 @default("unknown") // available | limited | unavailable | unknown
+  availabilityAt DateTime?
+  contactName    String?
+  contactPhone   String?
+  addressText    String?
+  latitude       Float?
+  longitude      Float?
+  location       Unsupported("geography(Point, 4326)")?
+  createdAt      DateTime                               @default(now())
+  updatedAt      DateTime                               @updatedAt
+
+  staff       User[]
+  preAlerts   PreAlert[]
+  assignments ResponderAssignment[]
+
+  @@index([type])
+}
+
+// ---------------------------------------------------------------- incidents
+model Incident {
+  id              String                                 @id @default(cuid())
+  reporterId      String?
+  reporter        User?                                  @relation("ReportedBy", fields: [reporterId], references: [id])
+  emergencyType   String
+  severity        String                                 @default("unknown")
+  status          IncidentStatus                         @default(REQUEST_STARTED)
+  addressText     String?
+  landmark        String?
+  latitude        Float?
+  longitude       Float?
+  location        Unsupported("geography(Point, 4326)")?
+  locationState   String                                 @default("pending") // pending | approximate | confirmed | unavailable
+  guidanceSlug    String?
+  guidanceVersion Int?
+  regionCode      String                                 @default("pilot-mock")
+  closedAt        DateTime?
+  closeReason     String?
+  createdAt       DateTime                               @default(now())
+  updatedAt       DateTime                               @updatedAt
+
+  triage        TriageAnswer[]
+  events        StatusEvent[]
+  dispatches    DispatchRequest[]
+  medRequests   MedProRequest[]
+  assignments   ResponderAssignment[]
+  preAlerts     PreAlert[]
+  contacts      TrustedContact[]      @relation("IncidentContacts")
+  notifications Notification[]
+
+  @@index([status])
+  @@index([regionCode])
+  @@index([createdAt])
+}
+
+model TriageAnswer {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+model StatusEvent {
+  id         String          @id @default(cuid())
+  incidentId String
+  incident   Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  from       IncidentStatus?
+  to         IncidentStatus
+  actorId    String?
+  actor      User?           @relation("ActedBy", fields: [actorId], references: [id])
+  source     String // user | responder | dispatcher | hospital | system | mock
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  @@index([incidentId, createdAt])
+}
+
+// ---------------------------------------------------------------- guidance
+model GuidanceBundle {
+  id         String         @id @default(cuid())
+  slug       String
+  version    Int            @default(1)
+  locale     String         @default("en")
+  title      String
+  steps      Json
+  status     GuidanceStatus @default(DRAFT)
+  reviewedAt DateTime?
+  reviewers  String[]       @default([])
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([slug, version, locale])
+  @@index([slug, locale])
+}
+
+// ------------------------------------------------------- coordination -----
+model DispatchRequest {
+  id             String       @id @default(cuid())
+  incidentId     String
+  incident       Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  targetType     String // emergency-service | ambulance-partner
+  targetName     String
+  state          RequestState @default(PENDING)
+  attempts       Int          @default(0)
+  idempotencyKey String       @unique
+  lastError      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([incidentId])
+}
+
+model ContactAttempt {
+  id             String       @id @default(cuid())
+  incidentId     String
+  channel        String // tel-link | mock-call | mock-sms
+  target         String
+  state          RequestState @default(PENDING)
+  idempotencyKey String       @unique
+  createdAt      DateTime     @default(now())
+}
+
+model MedProRequest {
+  id             String       @id @default(cuid())
+  incidentId     String
+  incident       Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  state          RequestState @default(PENDING)
+  provider       String       @default("mock")
+  connectedAt    DateTime?
+  endedAt        DateTime?
+  idempotencyKey String       @unique
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([incidentId])
+}
+
+model ResponderProfile {
+  id           String             @id @default(cuid())
+  userId       String             @unique
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  capabilities String[]           @default([])
+  availability String             @default("off-duty") // available | busy | off-duty
+  status       VerificationStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model VerificationRecord {
+  id        String             @id @default(cuid())
+  userEmail String
+  kind      String // identity | training | credential
+  issuer    String?
+  expiresAt DateTime?
+  status    VerificationStatus @default(PENDING)
+  reviewer  String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userEmail])
+}
+
+model ResponderAssignment {
+  id         String       @id @default(cuid())
+  incidentId String
+  incident   Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  userEmail  String
+  facilityId String?
+  facility   Facility?    @relation(fields: [facilityId], references: [id])
+  state      RequestState @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([incidentId])
+}
+
+model PreAlert {
+  id         String       @id @default(cuid())
+  incidentId String
+  incident   Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  facilityId String
+  facility   Facility     @relation(fields: [facilityId], references: [id])
+  state      RequestState @default(PENDING)
+  payload    Json?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([facilityId])
+  @@index([incidentId])
+}
+
+// ------------------------------------------------------- contacts + notify
+model TrustedContact {
+  id         String              @id @default(cuid())
+  ownerId    String
+  owner      User                @relation("OwnerContacts", fields: [ownerId], references: [id], onDelete: Cascade)
+  incidentId String?
+  incident   Incident?           @relation("IncidentContacts", fields: [incidentId], references: [id], onDelete: Cascade)
+  name       String
+  channel    NotificationChannel @default(SMS)
+  address    String // phone number or email (fictional in dev)
+  consentAt  DateTime?
+  createdAt  DateTime            @default(now())
+
+  @@index([ownerId])
+}
+
+model Notification {
+  id         String              @id @default(cuid())
+  incidentId String
+  incident   Incident            @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  channel    NotificationChannel
+  recipient  String
+  template   String
+  state      DeliveryState       @default(QUEUED)
+  provider   String              @default("mock")
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([incidentId])
+}
+
+// ------------------------------------------------------- ops + config -----
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action    String
+  object    String
+  objectId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SafetyReport {
+  id         String   @id @default(cuid())
+  incidentId String?
+  reporter   String?
+  category   String // unsafe-guidance | false-report | misuse | impersonation | access
+  detail     String
+  state      String   @default("open") // open | reviewing | resolved
+  createdAt  DateTime @default(now())
+}
+
+model RegionConfig {
+  code            String   @id // e.g. pilot-mock
+  name            String
+  emergencyNumber String // "000-MOCK" until a real market is confirmed
+  languages       String[] @default(["en"])
+  features        Json // { partnerDispatch: false, livePro: false, ... }
+  updatedAt       DateTime @updatedAt
+}

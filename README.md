@@ -32,13 +32,28 @@ in development. No paid SaaS required to run locally.
 
 ## Local setup (Windows)
 
-1. Install Node.js LTS, Git, and Docker Desktop (Docker is **missing** on this
-   machine — see Decisions below).
-2. `cp .env.example .env` (Git Bash) or `copy .env.example .env` (PowerShell).
+1. Install Node.js LTS, Git, and Docker Desktop. Start Docker Desktop and
+   wait for the engine (green status) before database steps. Docker CLI lives
+   at `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin` for per-user
+   installs — add it to PATH or use the full path.
+2. `copy .env.example .env` (PowerShell). Defaults point at the Compose DB:
+   `postgresql://emergency:emergency@localhost:5432/emergency`.
    Use `npm.cmd`/`npx.cmd` if `npm.ps1` is blocked by execution policy.
-3. Install deps, start DB, migrate + seed, run dev (scripts land with the
-   Next.js scaffold — currently **not yet scaffolded**).
-4. Sign in with fictional dev accounts (to be seeded; never real patient data).
+3. `npm.cmd install`
+4. `npm.cmd run db:up` — starts Postgres/PostGIS (`postgis/postgis:16-3.4`).
+5. Enable PostGIS once per fresh volume:
+   `docker exec emergency-app-db psql -U emergency -d emergency -c "CREATE EXTENSION IF NOT EXISTS postgis;"`
+6. `npm.cmd run db:migrate` then `npm.cmd run db:seed` (fictional data only).
+7. `npm.cmd run dev` → http://localhost:3000, health at `/api/health`.
+8. Sign-in with fictional dev accounts lands with the auth increment (users
+   are seeded; no passwords/sessions yet).
+
+Database reset: `npm.cmd run db:reset` (drops + re-migrates + reseeds), or
+`docker compose down -v` for a full wipe including the extension.
+
+Prisma is pinned to v6 (`@prisma/client@6`, `prisma@6`): v7.10.0's CLI was
+uninstallable at scaffold time (upstream `effect@^4.0.3` missing from the
+registry). Re-evaluate before upgrading.
 
 ## What works now vs later
 
