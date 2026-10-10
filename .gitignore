@@ -12,8 +12,8 @@ coverage/
 .env.*.local
 !.env.example
 
-# Prisma
-/prisma/migrations/migration_lock.toml
+# Prisma (migration_lock.toml is intentionally tracked: it pins the
+# database provider for migrate commands)
 
 # OS / editor
 .DS_Store
