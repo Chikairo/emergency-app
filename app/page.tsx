@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ContactFallback } from "@/components/ui/ContactFallback";
 import { EmergencyButton } from "@/components/ui/EmergencyButton";
+import { InstallApp } from "@/components/pwa/InstallApp";
 
 export default function Home() {
   return (
@@ -43,6 +44,8 @@ export default function Home() {
       </section>
 
       <ContactFallback />
+
+      <InstallApp />
     </div>
   );
 }
