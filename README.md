@@ -51,6 +51,29 @@ in development. No paid SaaS required to run locally.
 Database reset: `npm.cmd run db:reset` (drops + re-migrates + reseeds), or
 `docker compose down -v` for a full wipe including the extension.
 
+## Connecting to Neon (hosted PostgreSQL, no Docker needed)
+
+No passwords in chat or Git — ever. On your machine only:
+
+1. Sign up at https://neon.tech and create a project (free tier; region
+   closest to your pilot). Create a database named `emergency`.
+2. In the Neon dashboard: enable the **PostGIS** extension for the database
+   (Neon supports it; our schema uses a `geography` column), and copy the
+   **pooled** connection string (ends with `?sslmode=require`, includes
+   `-pooler`) plus the **direct** connection string.
+3. Locally, edit the gitignored `.env` (never commit it):
+   `DATABASE_URL="<pooled-string>?schema=public"` (runtime, pooled),
+   `DIRECT_URL="<direct-string>?schema=public"` (migrations).
+4. Enable the extension once: connect with Neon's SQL editor and run
+   `CREATE EXTENSION IF NOT EXISTS postgis;`
+5. `npm.cmd run db:migrate` (creates tables; additive only — never
+   `db:reset` against a shared database), then `npm.cmd run db:seed`.
+6. `npm.cmd run dev` — the server log should show no `[stores]` fallback
+   warning, and `/api/health` reports `"storage":"postgres"`.
+7. Generate the auth secret locally when wiring sign-in:
+   `npx @better-auth/cli secret` → paste into `.env` as `BETTER_AUTH_SECRET`
+   (dev placeholder only; production gets its own value in Vercel env vars).
+
 Prisma is pinned to v6 (`@prisma/client@6`, `prisma@6`): v7.10.0's CLI was
 uninstallable at scaffold time (upstream `effect@^4.0.3` missing from the
 registry). Re-evaluate before upgrading.

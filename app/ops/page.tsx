@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { incidentStore } from "@/lib/incident-store";
+import { requirePageRoles } from "@/lib/auth-server";
+import { OPS_ROLES } from "@/lib/authz";
+import { apiGet } from "@/lib/server-api";
+import type { IncidentRecord } from "@/modules/incidents/repository";
 
 export const instant = false;
 
-// Operations view: all local reports with failed handoffs surfaced first.
-// Dev-only: no RBAC yet — authorisation lands with the auth increment.
+// Operations view: dispatch/system roles only (redirects to sign-in).
+// Failed handoffs surface first. Data via the API, never the store.
 export default async function OpsPage() {
-  const incidents = incidentStore.listIncidents();
+  await requirePageRoles(OPS_ROLES);
+  const { incidents } = await apiGet<{ incidents: IncidentRecord[] }>("/api/incidents");
   const needsAttention = incidents.filter((i) =>
     ["UNABLE_TO_CONFIRM", "REQUEST_SENT"].includes(i.status),
   );

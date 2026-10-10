@@ -1,4 +1,4 @@
-import { getStore, toErrorResponse } from "../../../_lib";
+import { getStore, scopedIncident, toErrorResponse } from "../../../_lib";
 
 export async function PATCH(
   request: Request,
@@ -6,8 +6,9 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    await scopedIncident(request, id);
     const body: unknown = await request.json();
-    const record = getStore().updateLocation(id, body);
+    const record = await getStore().updateLocation(id, body);
     return Response.json({ incident: record });
   } catch (error) {
     return toErrorResponse(error);

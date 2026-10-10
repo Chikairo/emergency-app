@@ -9,12 +9,14 @@ import { submitTriageSchema } from "@/modules/triage/validation";
 
 const RULESET = "rapid-v1-draft";
 
-function incidentWith(store: MemoryIncidentStore): string {
-  return store.createIncident({
-    affectsSelf: true,
-    emergencyType: "Test",
-    idempotencyKey: `triage-${Math.random().toString(36).slice(2)}`,
-  }).id;
+function incidentWith(store: MemoryIncidentStore): Promise<string> {
+  return store
+    .createIncident({
+      affectsSelf: true,
+      emergencyType: "Test",
+      idempotencyKey: `triage-${Math.random().toString(36).slice(2)}`,
+    })
+    .then((r) => r.id);
 }
 
 describe("triage classification (unknown-safe, not a diagnosis)", () => {
@@ -69,10 +71,10 @@ describe("triage classification (unknown-safe, not a diagnosis)", () => {
 });
 
 describe("triage submission (voice and tap share one path)", () => {
-  it("stores voice answers with source, classifies server-side", () => {
+  it("stores voice answers with source, classifies server-side", async () => {
     const store = new MemoryIncidentStore();
-    const id = incidentWith(store);
-    const res = store.submitTriage(
+    const id = await incidentWith(store);
+    const res = await store.submitTriage(
       id,
       {
         answers: [
@@ -90,16 +92,16 @@ describe("triage submission (voice and tap share one path)", () => {
     expect(res.incident.triageResults[0]?.source).toBe("voice");
   });
 
-  it("is idempotent on replay (no duplicate answers)", () => {
+  it("is idempotent on replay (no duplicate answers)", async () => {
     const store = new MemoryIncidentStore();
-    const id = incidentWith(store);
+    const id = await incidentWith(store);
     const body = {
       answers: [{ questionId: "responsive", answer: "no" }],
       rulesetVersion: RULESET,
       idempotencyKey: "triage-key-dup",
     };
-    const a = store.submitTriage(id, body, { source: "tap" });
-    const b = store.submitTriage(id, body, { source: "tap" });
+    const a = await store.submitTriage(id, body, { source: "tap" });
+    const b = await store.submitTriage(id, body, { source: "tap" });
     expect(a.urgency).toBe("CRITICAL");
     expect(b.incident.triageResults).toHaveLength(1);
   });

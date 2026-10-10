@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as health } from "@/app/api/health/route";
-import { POST as create } from "@/app/api/incidents/route";
+import { GET as listAll, POST as create } from "@/app/api/incidents/route";
 import { GET as getOne } from "@/app/api/incidents/[id]/route";
 import { PATCH as setLocation } from "@/app/api/incidents/[id]/location/route";
 import { POST as setStatus } from "@/app/api/incidents/[id]/status/route";
@@ -24,6 +24,23 @@ function jsonRequest(url: string, method: string, body: unknown): Request {
     body: JSON.stringify(body),
   });
 }
+
+// Session boundary stub: production reads the Better Auth cookie.
+// null = anonymous urgent flow; STAFF/OWNER/OTHER switch per test.
+const mockUser = vi.hoisted(() => ({
+  value: null as null | { id: string; email: string; role: string; facilityId: string | null },
+}));
+vi.mock("@/lib/auth-session", () => ({
+  getRequestUser: async () => mockUser.value,
+}));
+
+const STAFF = { id: "staff-1", email: "dispatcher@example.com", role: "DISPATCHER", facilityId: null };
+const OWNER = { id: "owner-1", email: "owner@example.com", role: "BYSTANDER", facilityId: null };
+const OTHER = { id: "other-9", email: "other@example.com", role: "BYSTANDER", facilityId: null };
+
+beforeEach(() => {
+  mockUser.value = null;
+});
 
 describe("emergency API (mock integrations, honest states)", () => {
   it("health reports ok with mock mode", async () => {
@@ -117,7 +134,72 @@ describe("emergency API (mock integrations, honest states)", () => {
   });
 });
 
+describe("authorization (unauthenticated rejected, records isolated)", () => {
+  it("rejects staff-only endpoints without a session (401)", async () => {
+    mockUser.value = null;
+    const ops = await listAll(new Request("http://localhost/api/incidents"));
+    expect(ops.status).toBe(401);
+    const denied = await requestDispatch(
+      jsonRequest("http://localhost/d", "POST", {
+        targetType: "ambulance-partner",
+        targetName: "Mock",
+        idempotencyKey: "auth-401-key-1",
+      }),
+      { params: Promise.resolve({ id: "whatever" }) },
+    );
+    expect(denied.status).toBe(401);
+  });
+
+  it("isolates owned incidents: owner reads, others get 404, anonymous denied", async () => {
+    mockUser.value = OWNER;
+    const created = await create(
+      jsonRequest("http://localhost/api/incidents", "POST", {
+        affectsSelf: true,
+        emergencyType: "Owned emergency",
+        idempotencyKey: "auth-owned-key-1",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { incident } = (await created.json()) as { incident: { id: string } };
+
+    mockUser.value = OTHER;
+    const foreign = await getOne(new Request(`http://localhost/api/incidents/${incident.id}`), {
+      params: Promise.resolve({ id: incident.id }),
+    });
+    expect(foreign.status).toBe(404);
+
+    mockUser.value = null;
+    const anon = await getOne(new Request(`http://localhost/api/incidents/${incident.id}`), {
+      params: Promise.resolve({ id: incident.id }),
+    });
+    expect(anon.status).toBe(404);
+
+    mockUser.value = OWNER;
+    const own = await getOne(new Request(`http://localhost/api/incidents/${incident.id}`), {
+      params: Promise.resolve({ id: incident.id }),
+    });
+    expect(own.status).toBe(200);
+  });
+
+  it("audits incident creation", async () => {
+    const { auditBuffer, clearAuditBuffer } = await import("@/lib/audit");
+    clearAuditBuffer();
+    mockUser.value = null;
+    await create(
+      jsonRequest("http://localhost/api/incidents", "POST", {
+        affectsSelf: true,
+        emergencyType: "Audited emergency",
+        idempotencyKey: "auth-audit-key-1",
+      }),
+    );
+    expect(auditBuffer.some((e) => e.action === "incident.created")).toBe(true);
+  });
+});
+
 describe("coordination API (Phase 2, mock providers)", () => {
+  beforeEach(() => {
+    mockUser.value = STAFF;
+  });
   async function makeIncident(key: string): Promise<string> {
     const res = await create(
       jsonRequest("http://localhost/api/incidents", "POST", {

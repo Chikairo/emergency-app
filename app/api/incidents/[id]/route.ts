@@ -1,16 +1,13 @@
-import { getStore, toErrorResponse } from "../../_lib";
+import { scopedIncident, toErrorResponse } from "../../_lib";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    const record = getStore().getIncident(id);
-    if (!record) {
-      return Response.json({ error: `Incident not found: ${id}` }, { status: 404 });
-    }
-    return Response.json({ incident: record });
+    const { incident } = await scopedIncident(request, id);
+    return Response.json({ incident });
   } catch (error) {
     return toErrorResponse(error);
   }

@@ -176,6 +176,7 @@ model Incident {
   reporter        User?                                  @relation("ReportedBy", fields: [reporterId], references: [id])
   emergencyType   String
   severity        String                                 @default("unknown")
+  affectsSelf     Boolean                                @default(true)
   status          IncidentStatus                         @default(REQUEST_STARTED)
   addressText     String?
   landmark        String?
@@ -185,6 +186,9 @@ model Incident {
   locationState   String                                 @default("pending") // pending | approximate | confirmed | unavailable
   guidanceSlug    String?
   guidanceVersion Int?
+  urgency         String?
+  urgencyBasis    String[]                               @default([])
+  rulesetVersion  String?
   regionCode      String                                 @default("pilot-mock")
   closedAt        DateTime?
   closeReason     String?
@@ -192,6 +196,7 @@ model Incident {
   updatedAt       DateTime                               @updatedAt
 
   triage        TriageAnswer[]
+  triageResults TriageResult[]
   events        StatusEvent[]
   dispatches    DispatchRequest[]
   medRequests   MedProRequest[]
@@ -232,6 +237,19 @@ model StatusEvent {
 }
 
 // ---------------------------------------------------------------- guidance
+model TriageResult {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  questionId String
+  answer     String
+  note       String?
+  source     String   @default("tap") // voice | tap | form
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
+}
+
 model GuidanceBundle {
   id         String         @id @default(cuid())
   slug       String
@@ -258,6 +276,7 @@ model DispatchRequest {
   targetName     String
   state          RequestState @default(PENDING)
   attempts       Int          @default(0)
+  simulated      Boolean      @default(false)
   idempotencyKey String       @unique
   lastError      String?
   createdAt      DateTime     @default(now())
@@ -282,6 +301,7 @@ model MedProRequest {
   incident       Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
   state          RequestState @default(PENDING)
   provider       String       @default("mock")
+  simulated      Boolean      @default(false)
   connectedAt    DateTime?
   endedAt        DateTime?
   idempotencyKey String       @unique
@@ -317,15 +337,16 @@ model VerificationRecord {
 }
 
 model ResponderAssignment {
-  id         String       @id @default(cuid())
-  incidentId String
-  incident   Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  userEmail  String
-  facilityId String?
-  facility   Facility?    @relation(fields: [facilityId], references: [id])
-  state      RequestState @default(PENDING)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  incidentId     String
+  incident       Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  userEmail      String
+  facilityId     String?
+  facility       Facility?    @relation(fields: [facilityId], references: [id])
+  state          RequestState @default(PENDING)
+  idempotencyKey String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([incidentId])
 }
@@ -348,8 +369,8 @@ model PreAlert {
 // ------------------------------------------------------- contacts + notify
 model TrustedContact {
   id         String              @id @default(cuid())
-  ownerId    String
-  owner      User                @relation("OwnerContacts", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId    String?
+  owner      User?               @relation("OwnerContacts", fields: [ownerId], references: [id], onDelete: Cascade)
   incidentId String?
   incident   Incident?           @relation("IncidentContacts", fields: [incidentId], references: [id], onDelete: Cascade)
   name       String
@@ -399,6 +420,14 @@ model SafetyReport {
   detail     String
   state      String   @default("open") // open | reviewing | resolved
   createdAt  DateTime @default(now())
+}
+
+model IdempotencyKey {
+  key        String   @id
+  incidentId String
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
 }
 
 model RegionConfig {

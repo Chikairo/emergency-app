@@ -21,10 +21,10 @@ export class MemoryIncidentStore implements IncidentStore {
   private createKeys = new Map<string, string>();
   private eventKeys = new Set<string>();
 
-  createIncident(
+  async createIncident(
     raw: unknown,
     opts: { reporter?: string | null } = {},
-  ): IncidentRecord {
+  ): Promise<IncidentRecord> {
     const input = reportIncidentSchema.parse(raw);
     const seen = this.createKeys.get(input.idempotencyKey);
     if (seen) {
@@ -63,17 +63,17 @@ export class MemoryIncidentStore implements IncidentStore {
     return record;
   }
 
-  getIncident(id: string): IncidentRecord | null {
+  async getIncident(id: string): Promise<IncidentRecord | null> {
     return this.incidents.get(id) ?? null;
   }
 
-  listIncidents(): IncidentRecord[] {
+  async listIncidents(): Promise<IncidentRecord[]> {
     return [...this.incidents.values()].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
 
-  updateLocation(id: string, raw: unknown): IncidentRecord {
+  async updateLocation(id: string, raw: unknown): Promise<IncidentRecord> {
     const record = this.incidents.get(id);
     if (!record) throw notFoundError(id);
     const location = locationSchema.parse(raw);
@@ -82,7 +82,11 @@ export class MemoryIncidentStore implements IncidentStore {
     return record;
   }
 
-  appendStatus(id: string, to: IncidentStatus, opts: AppendStatusOptions): IncidentRecord {
+  async appendStatus(
+    id: string,
+    to: IncidentStatus,
+    opts: AppendStatusOptions,
+  ): Promise<IncidentRecord> {
     const record = this.incidents.get(id);
     if (!record) throw notFoundError(id);
     const key = `${id}:${opts.idempotencyKey}`;
@@ -109,11 +113,11 @@ export class MemoryIncidentStore implements IncidentStore {
     return this.incidents.size;
   }
 
-  submitTriage(
+  async submitTriage(
     id: string,
     raw: unknown,
     opts: { source: string },
-  ): { incident: IncidentRecord; urgency: string; basis: string[] } {
+  ): Promise<{ incident: IncidentRecord; urgency: string; basis: string[] }> {
     const record = this.incidents.get(id);
     if (!record) throw notFoundError(id);
     const input = submitTriageSchema.parse(raw);

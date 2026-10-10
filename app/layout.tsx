@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import { EmergencyButton } from "@/components/ui/EmergencyButton";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
+import { AuthStatusSlot } from "@/components/auth/AuthStatusSlot";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,6 +43,9 @@ export default function RootLayout({
             <span className="rounded-full border border-red-200/50 px-3 py-1 text-sm font-semibold text-red-100">
               MOCK
             </span>
+            <Suspense fallback={null}>
+              <AuthStatusSlot />
+            </Suspense>
           </div>
         </header>
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6 pb-28">

@@ -1,22 +1,26 @@
+import { audit } from "@/lib/audit";
+import { DISPATCH_ROLES, requireRoles } from "@/lib/authz";
 import { coordinationStore } from "@/lib/coordination-store";
-import { getStore, toErrorResponse } from "../../../_lib";
+import { getUser, scopedIncident, toErrorResponse } from "../../../_lib";
 
-function mustIncident(id: string) {
-  const incident = getStore().getIncident(id);
-  if (!incident) throw new Error(`Incident not found: ${id}`);
-  return incident;
-}
-
-// Mock dispatch request: records SENT, never dispatched.
+// Mock dispatch request: records SENT, never dispatched. Staff only.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    mustIncident(id);
+    const user = requireRoles(await getUser(request), DISPATCH_ROLES);
+    await scopedIncident(request, id);
     const body: unknown = await request.json();
-    const dispatch = coordinationStore.requestDispatch(id, body);
+    const dispatch = await coordinationStore.requestDispatch(id, body);
+    await audit({
+      actorId: user.id,
+      action: "dispatch.requested",
+      object: "dispatch",
+      objectId: dispatch.id,
+      metadata: { incidentId: id },
+    });
     return Response.json({ dispatch }, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);
@@ -24,13 +28,14 @@ export async function POST(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    mustIncident(id);
-    return Response.json({ dispatches: coordinationStore.listDispatches(id) });
+    requireRoles(await getUser(request), DISPATCH_ROLES);
+    await scopedIncident(request, id);
+    return Response.json({ dispatches: await coordinationStore.listDispatches(id) });
   } catch (error) {
     return toErrorResponse(error);
   }

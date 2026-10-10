@@ -13,5 +13,11 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: ["node_modules", "tests/e2e/**"],
+    // Unit tests run against the volatile in-memory adapters, never a live
+    // database — even though a local .env exists on this machine.
+    env: {
+      DATABASE_URL: "",
+      DIRECT_URL: "",
+    },
   },
 });

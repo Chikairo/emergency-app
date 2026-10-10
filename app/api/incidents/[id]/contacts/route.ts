@@ -1,17 +1,17 @@
 import { coordinationStore } from "@/lib/coordination-store";
 import { contactCreateSchema } from "@/modules/coordination/validation";
-import { getStore, toErrorResponse } from "../../../_lib";
+import { scopedIncident, toErrorResponse } from "../../../_lib";
 
-// Trusted contacts require explicit consent (422 without it).
+// Trusted contacts require explicit consent (400 without it).
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    if (!getStore().getIncident(id)) throw new Error(`Incident not found: ${id}`);
+    await scopedIncident(request, id);
     const body: unknown = await request.json();
-    const contact = coordinationStore.addContact(id, contactCreateSchema.parse(body));
+    const contact = await coordinationStore.addContact(id, contactCreateSchema.parse(body));
     return Response.json({ contact }, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);
@@ -19,13 +19,13 @@ export async function POST(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    if (!getStore().getIncident(id)) throw new Error(`Incident not found: ${id}`);
-    return Response.json({ contacts: coordinationStore.listContacts(id) });
+    await scopedIncident(request, id);
+    return Response.json({ contacts: await coordinationStore.listContacts(id) });
   } catch (error) {
     return toErrorResponse(error);
   }

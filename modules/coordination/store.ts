@@ -77,7 +77,24 @@ export interface NotificationRecord {
   createdAt: Date;
 }
 
-export class CoordinationStore {
+export interface CoordinationPort {
+  requestDispatch(incidentId: string, raw: unknown): Promise<DispatchRecord>;
+  simulateDispatchAck(id: string): Promise<DispatchRecord>;
+  simulateDispatchConfirm(id: string): Promise<DispatchRecord>;
+  listDispatches(incidentId: string): Promise<DispatchRecord[]>;
+  requestMedpro(incidentId: string, idempotencyKey: string): Promise<MedproRecord>;
+  simulateMedproAccept(id: string): Promise<MedproRecord>;
+  expireStaleMedpro(timeoutMs: number, now?: Date): Promise<number>;
+  listMedpro(incidentId: string): Promise<MedproRecord[]>;
+  assignResponder(incidentId: string, input: AssignmentCreateInput): Promise<AssignmentRecord>;
+  acknowledgeAssignment(id: string): Promise<AssignmentRecord>;
+  listAssignments(incidentId: string): Promise<AssignmentRecord[]>;
+  addContact(incidentId: string, input: ContactCreateInput): Promise<ContactRecord>;
+  listContacts(incidentId: string): Promise<ContactRecord[]>;
+  notifyContacts(incidentId: string): Promise<NotificationRecord[]>;
+}
+
+export class CoordinationStore implements CoordinationPort {
   private dispatches = new Map<string, DispatchRecord>();
   private dispatchKeys = new Map<string, string>();
   private medpros = new Map<string, MedproRecord>();
@@ -89,11 +106,11 @@ export class CoordinationStore {
 
   // ---------------------------------------------------------- dispatch ----
   /** Validated entry-point: parses raw input, then creates idempotently. */
-  requestDispatch(incidentId: string, raw: unknown): DispatchRecord {
+  async requestDispatch(incidentId: string, raw: unknown): Promise<DispatchRecord> {
     return this.createDispatch(incidentId, dispatchCreateSchema.parse(raw));
   }
 
-  createDispatch(incidentId: string, input: DispatchCreateInput): DispatchRecord {
+  async createDispatch(incidentId: string, input: DispatchCreateInput): Promise<DispatchRecord> {
     const seen = this.dispatchKeys.get(`${incidentId}:${input.idempotencyKey}`);
     if (seen) {
       const existing = this.dispatches.get(seen);
@@ -117,7 +134,7 @@ export class CoordinationStore {
   }
 
   /** Dev-only: pretend the named service acknowledged. Flagged simulated. */
-  simulateDispatchAck(id: string): DispatchRecord {
+  async simulateDispatchAck(id: string): Promise<DispatchRecord> {
     const rec = this.mustDispatch(id);
     if (rec.state !== "SENT") throw new Error(`Dispatch ${id} is ${rec.state}; only SENT can be acknowledged`);
     rec.state = "ACKNOWLEDGED";
@@ -127,7 +144,7 @@ export class CoordinationStore {
   }
 
   /** Dev-only: pretend the service confirmed dispatch. Flagged simulated. */
-  simulateDispatchConfirm(id: string): DispatchRecord {
+  async simulateDispatchConfirm(id: string): Promise<DispatchRecord> {
     const rec = this.mustDispatch(id);
     if (rec.state !== "ACKNOWLEDGED") {
       throw new Error(`Dispatch ${id} is ${rec.state}; acknowledgement is required before dispatch`);
@@ -138,7 +155,7 @@ export class CoordinationStore {
     return rec;
   }
 
-  listDispatches(incidentId: string): DispatchRecord[] {
+  async listDispatches(incidentId: string): Promise<DispatchRecord[]> {
     return [...this.dispatches.values()].filter((d) => d.incidentId === incidentId);
   }
 
@@ -149,7 +166,7 @@ export class CoordinationStore {
   }
 
   // ------------------------------------------------------------ med-pro ---
-  requestMedpro(incidentId: string, idempotencyKey: string): MedproRecord {
+  async requestMedpro(incidentId: string, idempotencyKey: string): Promise<MedproRecord> {
     const seen = this.medproKeys.get(`${incidentId}:${idempotencyKey}`);
     if (seen) {
       const existing = this.medpros.get(seen);
@@ -171,7 +188,7 @@ export class CoordinationStore {
   }
 
   /** Dev-only: pretend a professional accepted. Flagged simulated. */
-  simulateMedproAccept(id: string): MedproRecord {
+  async simulateMedproAccept(id: string): Promise<MedproRecord> {
     const rec = this.mustMedpro(id);
     if (rec.state !== "PENDING") throw new Error(`Med-pro request ${id} is ${rec.state}`);
     rec.state = "ACCEPTED";
@@ -180,7 +197,7 @@ export class CoordinationStore {
     return rec;
   }
 
-  expireStaleMedpro(timeoutMs: number, now = new Date()): number {
+  async expireStaleMedpro(timeoutMs: number, now = new Date()): Promise<number> {
     let expired = 0;
     for (const rec of this.medpros.values()) {
       if (rec.state === "PENDING" && now.getTime() - rec.createdAt.getTime() > timeoutMs) {
@@ -192,7 +209,7 @@ export class CoordinationStore {
     return expired;
   }
 
-  listMedpro(incidentId: string): MedproRecord[] {
+  async listMedpro(incidentId: string): Promise<MedproRecord[]> {
     return [...this.medpros.values()].filter((m) => m.incidentId === incidentId);
   }
 
@@ -203,7 +220,10 @@ export class CoordinationStore {
   }
 
   // ---------------------------------------------------------- responders --
-  assignResponder(incidentId: string, input: AssignmentCreateInput): AssignmentRecord {
+  async assignResponder(
+    incidentId: string,
+    input: AssignmentCreateInput,
+  ): Promise<AssignmentRecord> {
     const roster = findResponder(input.responderEmail);
     if (!roster) throw new Error(`Unknown responder: ${input.responderEmail}`);
     if (!roster.verified) {
@@ -230,7 +250,7 @@ export class CoordinationStore {
     return rec;
   }
 
-  acknowledgeAssignment(id: string): AssignmentRecord {
+  async acknowledgeAssignment(id: string): Promise<AssignmentRecord> {
     const rec = this.assignments.get(id);
     if (!rec) throw new Error(`Assignment not found: ${id}`);
     if (rec.state !== "PENDING") throw new Error(`Assignment ${id} is ${rec.state}`);
@@ -239,12 +259,12 @@ export class CoordinationStore {
     return rec;
   }
 
-  listAssignments(incidentId: string): AssignmentRecord[] {
+  async listAssignments(incidentId: string): Promise<AssignmentRecord[]> {
     return [...this.assignments.values()].filter((a) => a.incidentId === incidentId);
   }
 
   // ------------------------------------------------------------ contacts --
-  addContact(incidentId: string, input: ContactCreateInput): ContactRecord {
+  async addContact(incidentId: string, input: ContactCreateInput): Promise<ContactRecord> {
     const list = this.contacts.get(incidentId) ?? [];
     const rec: ContactRecord = {
       id: randomUUID(),
@@ -260,14 +280,14 @@ export class CoordinationStore {
     return rec;
   }
 
-  listContacts(incidentId: string): ContactRecord[] {
+  async listContacts(incidentId: string): Promise<ContactRecord[]> {
     return this.contacts.get(incidentId) ?? [];
   }
 
   /** Dev-only mock notify: records SENT, never claims real delivery. */
-  notifyContacts(incidentId: string): NotificationRecord[] {
+  async notifyContacts(incidentId: string): Promise<NotificationRecord[]> {
     const sent: NotificationRecord[] = [];
-    for (const c of this.listContacts(incidentId)) {
+    for (const c of await this.listContacts(incidentId)) {
       const n: NotificationRecord = {
         id: randomUUID(),
         incidentId,

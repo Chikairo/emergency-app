@@ -1,14 +1,13 @@
-import { MemoryIncidentStore } from "@/modules/incidents/memory-store";
+import { getIncidentStore } from "@/lib/stores";
+import type { IncidentStore } from "@/modules/incidents/repository";
 
-const globalForStore = globalThis as unknown as {
-  incidentStore?: MemoryIncidentStore;
-};
-
-// Dev/DB-free singleton. The Prisma adapter will replace this behind the
-// same IncidentStore interface once a database is available.
-export const incidentStore =
-  globalForStore.incidentStore ?? new MemoryIncidentStore();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForStore.incidentStore = incidentStore;
-}
+// Stable import surface; every access resolves the current backend
+// (Prisma when DATABASE_URL is set, guarded memory in dev). Methods stay
+// bound so `this` always refers to the live backend.
+export const incidentStore: IncidentStore = new Proxy({} as IncidentStore, {
+  get(_target, prop) {
+    const backend = getIncidentStore() as unknown as Record<string | symbol, unknown>;
+    const value = backend[prop];
+    return typeof value === "function" ? value.bind(backend) : value;
+  },
+});

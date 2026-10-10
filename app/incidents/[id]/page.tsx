@@ -9,8 +9,11 @@ import { DispatchPanel } from "@/components/coordination/DispatchPanel";
 import { MedproPanel } from "@/components/coordination/MedproPanel";
 import { RespondersPanel } from "@/components/coordination/RespondersPanel";
 import { VoiceTriage } from "@/components/triage/VoiceTriage";
-import { coordinationStore } from "@/lib/coordination-store";
-import { incidentStore } from "@/lib/incident-store";
+import { isStaff } from "@/lib/authz";
+import { getPageUser } from "@/lib/auth-server";
+import { ApiError, apiGet } from "@/lib/server-api";
+import type { AssignmentRecord, ContactRecord, DispatchRecord, MedproRecord } from "@/modules/coordination/store";
+import type { IncidentRecord } from "@/modules/incidents/repository";
 import { getBundle } from "@/modules/guidance/bundles";
 
 // Incident data is per-report and uncached: allow a blocking dynamic route
@@ -23,17 +26,35 @@ export default async function IncidentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // DB-free dev read: same-process store. The Prisma adapter serves this
-  // read once a database is available.
-  const incident = incidentStore.getIncident(id);
-  if (!incident) notFound();
+  const user = await getPageUser();
+  // Single data path through the API (never the store directly): route
+  // handlers own storage, so pages work across runtimes. The API enforces
+  // owner/staff/link scoping; denials read as "not found".
+  let incident: IncidentRecord;
+  try {
+    ({ incident } = await apiGet<{ incident: IncidentRecord }>(
+      `/api/incidents/${id}`,
+    ));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    throw error;
+  }
+  const staff = Boolean(user && isStaff(user.role));
 
   const slug = /bleed/i.test(incident.emergencyType) ? "sample-bleeding" : "sample-choking";
   const guidance = getBundle(slug);
-  const dispatches = coordinationStore.listDispatches(id);
-  const medpros = coordinationStore.listMedpro(id);
-  const assignments = coordinationStore.listAssignments(id);
-  const contacts = coordinationStore.listContacts(id);
+  const dispatches = staff
+    ? (await apiGet<{ dispatches: DispatchRecord[] }>(`/api/incidents/${id}/dispatch`)).dispatches
+    : [];
+  const medpros = staff
+    ? (await apiGet<{ requests: MedproRecord[] }>(`/api/incidents/${id}/medpro`)).requests
+    : [];
+  const assignments = staff
+    ? (await apiGet<{ assignments: AssignmentRecord[] }>(`/api/incidents/${id}/assign`)).assignments
+    : [];
+  const contacts = (
+    await apiGet<{ contacts: ContactRecord[] }>(`/api/incidents/${id}/contacts`)
+  ).contacts;
   const closed =
     incident.status === "COMPLETED_HANDED_OVER" || incident.status === "CANCELLED";
 
@@ -113,32 +134,41 @@ export default async function IncidentPage({
 
       {!closed && (
         <>
-          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Dispatch coordination">
-            <h2 className="text-2xl font-bold">Dispatch coordination</h2>
-            <p className="mt-1 text-base text-zinc-600">
-              Mock partners only. A request is SENT until the named service confirms — never assume dispatch.
-            </p>
-            <div className="mt-2">
-              <DispatchPanel incidentId={incident.id} initial={dispatches} />
-            </div>
-          </section>
+          {staff ? (
+            <>
+              <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Dispatch coordination">
+                <h2 className="text-2xl font-bold">Dispatch coordination</h2>
+                <p className="mt-1 text-base text-zinc-600">
+                  Mock partners only. A request is SENT until the named service confirms — never assume dispatch.
+                </p>
+                <div className="mt-2">
+                  <DispatchPanel incidentId={incident.id} initial={dispatches} />
+                </div>
+              </section>
 
-          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Medical professional">
-            <h2 className="text-2xl font-bold">Medical professional</h2>
-            <p className="mt-1 text-base text-zinc-600">
-              Mock queue. Pending means nobody connected — keep following the guidance above.
-            </p>
-            <div className="mt-2">
-              <MedproPanel incidentId={incident.id} initial={medpros} />
-            </div>
-          </section>
+              <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Medical professional">
+                <h2 className="text-2xl font-bold">Medical professional</h2>
+                <p className="mt-1 text-base text-zinc-600">
+                  Mock queue. Pending means nobody connected — keep following the guidance above.
+                </p>
+                <div className="mt-2">
+                  <MedproPanel incidentId={incident.id} initial={medpros} />
+                </div>
+              </section>
 
-          <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Nearby responders">
-            <h2 className="text-2xl font-bold">Nearby responders</h2>
-            <div className="mt-2">
-              <RespondersPanel incidentId={incident.id} initial={assignments} />
-            </div>
-          </section>
+              <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Nearby responders">
+                <h2 className="text-2xl font-bold">Nearby responders</h2>
+                <div className="mt-2">
+                  <RespondersPanel incidentId={incident.id} initial={assignments} />
+                </div>
+              </section>
+            </>
+          ) : (
+            <p className="rounded-2xl bg-white p-5 text-lg text-zinc-600 shadow-sm">
+              Responder and dispatch coordination appear here for signed-in staff. Your report,
+              guidance, and status above are unaffected.
+            </p>
+          )}
 
           <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Trusted contacts">
             <h2 className="text-2xl font-bold">Trusted contacts</h2>

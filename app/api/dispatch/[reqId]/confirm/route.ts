@@ -1,14 +1,23 @@
+import { audit } from "@/lib/audit";
+import { DISPATCH_ROLES, requireRoles } from "@/lib/authz";
 import { coordinationStore } from "@/lib/coordination-store";
-import { toErrorResponse } from "../../../_lib";
+import { getUser, toErrorResponse } from "../../../_lib";
 
 // Dev-only mock dispatch confirmation. Response is flagged simulated.
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ reqId: string }> },
 ) {
   try {
+    const user = requireRoles(await getUser(request), DISPATCH_ROLES);
     const { reqId } = await params;
-    const dispatch = coordinationStore.simulateDispatchConfirm(reqId);
+    const dispatch = await coordinationStore.simulateDispatchConfirm(reqId);
+    await audit({
+      actorId: user.id,
+      action: "dispatch.confirmed",
+      object: "dispatch",
+      objectId: reqId,
+    });
     return Response.json({ dispatch });
   } catch (error) {
     return toErrorResponse(error);

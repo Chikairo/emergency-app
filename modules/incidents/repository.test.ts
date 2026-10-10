@@ -17,66 +17,66 @@ const landmark = {
 };
 
 describe("MemoryIncidentStore (Docker-free dev adapter)", () => {
-  it("creates an incident in REQUEST_STARTED with a creation event", () => {
+  it("creates an incident in REQUEST_STARTED with a creation event", async () => {
     const store = new MemoryIncidentStore();
-    const rec = store.createIncident(report);
+    const rec = await store.createIncident(report);
     expect(rec.status).toBe("REQUEST_STARTED");
     expect(rec.events).toHaveLength(1);
     expect(rec.events[0]?.to).toBe("REQUEST_STARTED");
-    expect(store.getIncident(rec.id)?.id).toBe(rec.id);
+    expect((await store.getIncident(rec.id))?.id).toBe(rec.id);
   });
 
-  it("is idempotent on create with the same key", () => {
+  it("is idempotent on create with the same key", async () => {
     const store = new MemoryIncidentStore();
-    const a = store.createIncident(report);
-    const b = store.createIncident({ ...report, emergencyType: "Changed" });
+    const a = await store.createIncident(report);
+    const b = await store.createIncident({ ...report, emergencyType: "Changed" });
     expect(b.id).toBe(a.id);
     expect(store.size).toBe(1);
   });
 
-  it("stores a landmark-only location without inventing coordinates", () => {
+  it("stores a landmark-only location without inventing coordinates", async () => {
     const store = new MemoryIncidentStore();
-    const rec = store.createIncident(report);
-    const updated = store.updateLocation(rec.id, landmark);
+    const rec = await store.createIncident(report);
+    const updated = await store.updateLocation(rec.id, landmark);
     expect(updated.location?.locationState).toBe("approximate");
     expect(updated.location?.latitude).toBeNull();
   });
 
-  it("appends legal transitions and rejects illegal ones", () => {
+  it("appends legal transitions and rejects illegal ones", async () => {
     const store = new MemoryIncidentStore();
-    const rec = store.createIncident(report);
-    const sent = store.appendStatus(rec.id, "REQUEST_SENT", {
+    const rec = await store.createIncident(report);
+    const sent = await store.appendStatus(rec.id, "REQUEST_SENT", {
       source: "system",
       idempotencyKey: "ev-1-abcdef",
     });
     expect(sent.status).toBe("REQUEST_SENT");
     expect(sent.events).toHaveLength(2);
-    expect(() =>
+    await expect(
       store.appendStatus(rec.id, "DISPATCHED_ACCEPTED", {
         source: "system",
         idempotencyKey: "ev-2-abcdef",
       }),
-    ).toThrow(InvalidTransitionError);
+    ).rejects.toThrow(InvalidTransitionError);
     // Failed append leaves state untouched.
-    expect(store.getIncident(rec.id)?.status).toBe("REQUEST_SENT");
+    expect((await store.getIncident(rec.id))?.status).toBe("REQUEST_SENT");
   });
 
-  it("is idempotent on status append with the same key", () => {
+  it("is idempotent on status append with the same key", async () => {
     const store = new MemoryIncidentStore();
-    const rec = store.createIncident(report);
-    store.appendStatus(rec.id, "REQUEST_SENT", { source: "system", idempotencyKey: "ev-dup-1234" });
-    const again = store.appendStatus(rec.id, "REQUEST_SENT", {
+    const rec = await store.createIncident(report);
+    await store.appendStatus(rec.id, "REQUEST_SENT", { source: "system", idempotencyKey: "ev-dup-1234" });
+    const again = await store.appendStatus(rec.id, "REQUEST_SENT", {
       source: "system",
       idempotencyKey: "ev-dup-1234",
     });
     expect(again.events).toHaveLength(2);
   });
 
-  it("throws for unknown incidents", () => {
+  it("throws for unknown incidents", async () => {
     const store = new MemoryIncidentStore();
-    expect(store.getIncident("missing")).toBeNull();
-    expect(() =>
+    expect(await store.getIncident("missing")).toBeNull();
+    await expect(
       store.appendStatus("missing", "REQUEST_SENT", { source: "system", idempotencyKey: "k-12345678" }),
-    ).toThrow(/not found/);
+    ).rejects.toThrow(/not found/);
   });
 });

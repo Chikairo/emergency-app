@@ -1,13 +1,11 @@
-import { CoordinationStore } from "@/modules/coordination/store";
+import { getCoordinationStore } from "@/lib/stores";
+import type { CoordinationPort } from "@/modules/coordination/store";
 
-const globalForCoord = globalThis as unknown as {
-  coordinationStore?: CoordinationStore;
-};
-
-// Dev/DB-free singleton; a Prisma-backed implementation slots in later.
-export const coordinationStore =
-  globalForCoord.coordinationStore ?? new CoordinationStore();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForCoord.coordinationStore = coordinationStore;
-}
+// Stable import surface with the same fail-closed selector behaviour.
+export const coordinationStore: CoordinationPort = new Proxy({} as CoordinationPort, {
+  get(_target, prop) {
+    const backend = getCoordinationStore() as unknown as Record<string | symbol, unknown>;
+    const value = backend[prop];
+    return typeof value === "function" ? value.bind(backend) : value;
+  },
+});

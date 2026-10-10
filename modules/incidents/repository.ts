@@ -1,5 +1,5 @@
 import type { IncidentStatus } from "./status";
-import type { LocationInput, ReportIncidentInput } from "./validation";
+import type { LocationInput } from "./validation";
 
 // Storage port for incidents. Prisma backs production; the in-memory
 // adapter backs local development without Docker. Both obey the same
@@ -49,16 +49,18 @@ export interface AppendStatusOptions {
 }
 
 export interface IncidentStore {
-  createIncident(input: ReportIncidentInput, opts: { reporter?: string | null }): IncidentRecord;
-  getIncident(id: string): IncidentRecord | null;
-  listIncidents(): IncidentRecord[];
-  updateLocation(id: string, location: LocationInput): IncidentRecord;
-  appendStatus(id: string, to: IncidentStatus, opts: AppendStatusOptions): IncidentRecord;
+  // Raw inputs are validated inside each adapter, so memory and Prisma
+  // share one validation path and routes stay unchanged.
+  createIncident(raw: unknown, opts?: { reporter?: string | null }): Promise<IncidentRecord>;
+  getIncident(id: string): Promise<IncidentRecord | null>;
+  listIncidents(): Promise<IncidentRecord[]>;
+  updateLocation(id: string, raw: unknown): Promise<IncidentRecord>;
+  appendStatus(id: string, to: IncidentStatus, opts: AppendStatusOptions): Promise<IncidentRecord>;
   submitTriage(
     id: string,
     raw: unknown,
     opts: { source: string },
-  ): { incident: IncidentRecord; urgency: string; basis: string[] };
+  ): Promise<{ incident: IncidentRecord; urgency: string; basis: string[] }>;
 }
 
 export function notFoundError(id: string): Error {

@@ -1,4 +1,4 @@
-import { getStore, toErrorResponse } from "../../../_lib";
+import { getStore, scopedIncident, toErrorResponse } from "../../../_lib";
 
 // Shared by voice and tap triage: identical validation, ruleset, and
 // classification. Source (voice|tap) is recorded per answer for audit.
@@ -8,12 +8,10 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    if (!getStore().getIncident(id)) {
-      return Response.json({ error: `Incident not found: ${id}` }, { status: 404 });
-    }
+    await scopedIncident(request, id);
     const body: unknown = await request.json();
     const { source, ...triage } = (body ?? {}) as { source?: unknown };
-    const result = getStore().submitTriage(id, triage, {
+    const result = await getStore().submitTriage(id, triage, {
       source: source === "voice" ? "voice" : "tap",
     });
     return Response.json(result);
@@ -23,15 +21,12 @@ export async function POST(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    const incident = getStore().getIncident(id);
-    if (!incident) {
-      return Response.json({ error: `Incident not found: ${id}` }, { status: 404 });
-    }
+    const { incident } = await scopedIncident(request, id);
     return Response.json({
       triage: {
         answers: incident.triageResults,
