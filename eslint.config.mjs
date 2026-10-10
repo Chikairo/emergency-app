@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Hand-rolled service worker (browser globals, not app code):
+    "public/sw.js",
+    // One-off icon generator (plain Node script, run manually):
+    "scripts/generate-icons.cjs",
   ]),
 ]);
 
