@@ -32,6 +32,21 @@ describe("CoordinationStore (mock provider, honest states)", () => {
     expect(await store.listDispatches("inc-1")).toHaveLength(1);
   });
 
+  it("records human availability separately from dispatch and deduplicates retries", async () => {
+    const store = new CoordinationStore();
+    const input = { targetName: "Ambulance A1", idempotencyKey: "available-step-key-1" };
+    const first = await store.recordAmbulanceAvailability("inc-1", input);
+    const retry = await store.recordAmbulanceAvailability("inc-1", input);
+    expect(first.id).toBe(retry.id);
+    expect(first.state).toBe("ACKNOWLEDGED");
+    expect(first.simulated).toBe(false);
+    expect(await store.findDispatchByIdempotencyKey("inc-1", input.idempotencyKey)).toMatchObject({
+      id: first.id,
+      state: "ACKNOWLEDGED",
+    });
+    expect(await store.listDispatches("inc-1")).toHaveLength(1);
+  });
+
   it("med-pro: pending, accept, and stale expiry fallback", async () => {
     const store = new CoordinationStore();
     const req = await store.requestMedpro("inc-1", "medpro-key-12");

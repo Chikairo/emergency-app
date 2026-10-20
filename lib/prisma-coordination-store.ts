@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { NotificationChannel, PrismaClient } from "@prisma/client";
 import { findResponder } from "@/modules/responders/roster";
 import { dispatchCreateSchema } from "@/modules/coordination/validation";
 import type {
@@ -73,12 +73,88 @@ export class PrismaCoordinationStore implements CoordinationPort {
     );
   }
 
+  /**
+   * Human dispatch decision (real incidents only). Same semantics as the
+   * memory adapter: SENT then immediately the authorized outcome, with
+   * simulated:false. Idempotent.
+   */
+  async recordDispatchDecision(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string; confirmed: boolean },
+  ): Promise<DispatchRecord> {
+    const key = `${incidentId}:${input.idempotencyKey}`;
+    const seen = await this.db.dispatchRequest.findUnique({ where: { idempotencyKey: key } }).catch(() => null);
+    if (seen) return this.toDispatch(seen);
+    try {
+      const rec = await this.db.dispatchRequest.create({
+        data: {
+          incidentId,
+          targetType: "ambulance-partner",
+          targetName: input.targetName,
+          state: input.confirmed ? "ACCEPTED" : "DECLINED",
+          attempts: 1,
+          simulated: false,
+          idempotencyKey: key,
+        },
+      });
+      return this.toDispatch(rec);
+    } catch {
+      const dup = await this.db.dispatchRequest.findUnique({ where: { idempotencyKey: key } });
+      if (!dup) throw new Error("Could not record the dispatch decision.");
+      return this.toDispatch(dup);
+    }
+  }
+
+  async recordAmbulanceAvailability(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string },
+  ): Promise<DispatchRecord> {
+    const key = `${incidentId}:${input.idempotencyKey}`;
+    const seen = await this.db.dispatchRequest.findUnique({ where: { idempotencyKey: key } });
+    if (seen) return this.toDispatch(seen);
+    try {
+      return this.toDispatch(
+        await this.db.dispatchRequest.create({
+          data: {
+            incidentId,
+            targetType: "ambulance-partner",
+            targetName: input.targetName,
+            state: "ACKNOWLEDGED",
+            attempts: 1,
+            simulated: false,
+            idempotencyKey: key,
+          },
+        }),
+      );
+    } catch (error) {
+      const duplicate = await this.db.dispatchRequest.findUnique({ where: { idempotencyKey: key } });
+      if (duplicate) return this.toDispatch(duplicate);
+      throw error;
+    }
+  }
+
+  async findDispatchByIdempotencyKey(
+    incidentId: string,
+    idempotencyKey: string,
+  ): Promise<DispatchRecord | null> {
+    const record = await this.db.dispatchRequest.findUnique({
+      where: { idempotencyKey: `${incidentId}:${idempotencyKey}` },
+    });
+    return record ? this.toDispatch(record) : null;
+  }
+
   async listDispatches(incidentId: string): Promise<DispatchRecord[]> {
     const rows = await this.db.dispatchRequest.findMany({
       where: { incidentId },
       orderBy: { createdAt: "asc" },
     });
     return rows.map((r) => this.toDispatch(r));
+  }
+
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getDispatch(id: string): Promise<DispatchRecord | null> {
+    const rec = await this.db.dispatchRequest.findUnique({ where: { id } });
+    return rec ? this.toDispatch(rec) : null;
   }
 
   // ------------------------------------------------------------ med-pro ---
@@ -124,6 +200,12 @@ export class PrismaCoordinationStore implements CoordinationPort {
     return rows.map((r) => this.toMedpro(r));
   }
 
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getMedpro(id: string): Promise<MedproRecord | null> {
+    const rec = await this.db.medProRequest.findUnique({ where: { id } });
+    return rec ? this.toMedpro(rec) : null;
+  }
+
   // ---------------------------------------------------------- responders --
   async assignResponder(incidentId: string, input: AssignmentCreateInput): Promise<AssignmentRecord> {
     const roster = findResponder(input.responderEmail);
@@ -136,6 +218,14 @@ export class PrismaCoordinationStore implements CoordinationPort {
       data: { incidentId, userEmail: roster.email, state: "PENDING", idempotencyKey: key },
     });
     return this.toAssignment(rec, roster.name, roster.verified);
+  }
+
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getAssignment(id: string): Promise<AssignmentRecord | null> {
+    const rec = await this.db.responderAssignment.findUnique({ where: { id } });
+    if (!rec) return null;
+    const roster = findResponder(rec.userEmail);
+    return this.toAssignment(rec, roster?.name ?? rec.userEmail, roster?.verified ?? false);
   }
 
   async acknowledgeAssignment(id: string): Promise<AssignmentRecord> {
@@ -193,29 +283,74 @@ export class PrismaCoordinationStore implements CoordinationPort {
     const contacts = await this.db.trustedContact.findMany({ where: { incidentId } });
     const sent: NotificationRecord[] = [];
     for (const c of contacts) {
-      const n = await this.db.notification.create({
-        data: {
-          incidentId,
-          recipient: c.address,
+      sent.push(
+        await this.recordNotification(incidentId, {
           channel: c.channel,
+          recipient: c.address,
           template: "incident-update",
-          state: "SENT",
           provider: "mock",
-        },
-      });
-      sent.push({
-        id: n.id,
-        incidentId,
-        recipient: n.recipient,
-        channel: n.channel,
-        template: n.template,
-        state: n.state as CoordState,
-        provider: "mock",
-        simulated: true,
-        createdAt: n.createdAt,
-      });
+          state: "SENT",
+        }),
+      );
     }
     return sent;
+  }
+
+  async recordNotification(
+    incidentId: string,
+    input: {
+      channel: string;
+      recipient: string;
+      template: string;
+      provider: string;
+      state: "SENT" | "FAILED" | "DELIVERED";
+      messageId?: string;
+    },
+  ): Promise<NotificationRecord> {
+    const n = await this.db.notification.create({
+      data: {
+        incidentId,
+        recipient: input.recipient,
+        channel: input.channel as NotificationChannel,
+        template: input.template,
+        state: input.state,
+        provider: input.provider,
+      },
+    });
+    return {
+      id: n.id,
+      incidentId,
+      recipient: n.recipient,
+      channel: n.channel,
+      template: n.template,
+      state: n.state as CoordState,
+      provider: n.provider,
+      simulated: n.provider === "mock",
+      createdAt: n.createdAt,
+    };
+  }
+
+  async findSentNotification(
+    incidentId: string,
+    recipient: string,
+    template: string,
+  ): Promise<NotificationRecord | null> {
+    const n = await this.db.notification.findFirst({
+      where: { incidentId, recipient, template, state: "SENT" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!n) return null;
+    return {
+      id: n.id,
+      incidentId,
+      recipient: n.recipient,
+      channel: n.channel,
+      template: n.template,
+      state: n.state as CoordState,
+      provider: n.provider,
+      simulated: n.provider === "mock",
+      createdAt: n.createdAt,
+    };
   }
 
   // -------------------------------------------------------------- mappers -

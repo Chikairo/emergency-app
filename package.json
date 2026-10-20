@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:prod": "playwright test -c playwright.prod.config.ts",
     "test:staging": "tsx scripts/staging-roundtrip.ts",
     "test:staging-auth": "tsx scripts/staging-auth-roundtrip.ts",
     "db:up": "docker compose up -d",
@@ -26,6 +27,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@daily-co/daily-js": "^0.93.0",
     "@prisma/client": "^6.19.3",
     "better-auth": "^1.7.7",
     "next": "16.4.0",

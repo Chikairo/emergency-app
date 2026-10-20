@@ -15,12 +15,15 @@ export function DispatchPanel({
   const router = useRouter();
   const [targetName, setTargetName] = useState("Mock Ambulance Co.");
   const [targetType, setTargetType] = useState("ambulance-partner");
+  const [vehicle, setVehicle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function post(url: string, body?: unknown) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -37,10 +40,80 @@ export function DispatchPanel({
     }
   }
 
+  async function decide(decision: "confirm" | "decline") {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/incidents/${incidentId}/ambulance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decision,
+          vehicle: vehicle.trim() || undefined,
+          idempotencyKey: `web-${Date.now()}`,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Request failed.");
+      setNotice(
+        decision === "confirm"
+          ? "Ambulance confirmed by you. The patient view now shows vehicle on the way."
+          : "Availability declined and recorded. The request stays open for reconsideration.",
+      );
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       {error && <FailureBanner title="Dispatch update failed" detail={error} />}
-      <div className="mt-2 flex flex-col gap-2">
+      {notice && (
+        <div role="status" className="mb-3 rounded-xl border border-green-300 bg-green-50 p-4 text-lg text-green-900">
+          {notice}
+        </div>
+      )}
+      <div className="rounded-xl border-2 border-[#0E7C3E] bg-green-50/50 p-4">
+        <p className="text-xl font-bold text-green-900">Real availability decision</p>
+        <p className="mt-1 text-base text-zinc-600">
+          Confirming records a genuine dispatcher decision (not simulated) and advances the
+          incident status. Only confirm a vehicle you have actually secured.
+        </p>
+        <label htmlFor="vehicle" className="mt-2 block text-lg font-semibold">
+          Vehicle or service name <span className="font-normal text-zinc-500">(optional)</span>
+        </label>
+        <input
+          id="vehicle"
+          value={vehicle}
+          onChange={(e) => setVehicle(e.target.value)}
+          placeholder="e.g. Ambulance A12"
+          maxLength={60}
+          className="mt-1 min-h-[56px] w-full rounded-xl border-2 border-zinc-200 bg-white px-4 text-lg text-zinc-900 placeholder:text-zinc-500"
+        />
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => decide("confirm")}
+            className="min-h-[56px] rounded-xl bg-[#0E7C3E] px-5 text-xl font-bold text-white disabled:opacity-50"
+          >
+            Confirm ambulance
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => decide("decline")}
+            className="min-h-[56px] rounded-xl border-2 border-[#C81E1E] px-5 text-xl font-bold text-[#C81E1E] disabled:opacity-50"
+          >
+            Decline — no vehicle
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-col gap-2">
         <label htmlFor="dtarget" className="text-lg font-semibold">Partner to request (mock)</label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <select

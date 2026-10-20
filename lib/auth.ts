@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "@/lib/db";
+import { getLocalDevelopmentTrustedOrigins } from "@/lib/staff-provision";
 
 // Better Auth (free OSS, MIT). Email + password over the Prisma schema's
 // User/Session/Account/Verification models. Role and facility travel on the
@@ -8,6 +9,12 @@ import { db } from "@/lib/db";
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  trustedOrigins: (request) =>
+    getLocalDevelopmentTrustedOrigins(
+      request,
+      process.env.NODE_ENV,
+      process.env.DATABASE_URL,
+    ),
   database: prismaAdapter(db, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,

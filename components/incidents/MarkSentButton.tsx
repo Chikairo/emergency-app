@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ContactFallback } from "@/components/ui/ContactFallback";
 import { FailureBanner } from "@/components/ui/FailureBanner";
 
 export function MarkSentButton({ id }: { id: string }) {
@@ -52,9 +51,6 @@ export function MarkSentButton({ id }: { id: string }) {
       >
         I called for help (record it)
       </button>
-      <div className="mt-3">
-        <ContactFallback />
-      </div>
     </div>
   );
 }

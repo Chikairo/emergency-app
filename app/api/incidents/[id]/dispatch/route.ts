@@ -33,7 +33,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    requireRoles(await getUser(request), DISPATCH_ROLES);
+    // Owners, link-holders, and staff can all see response states for an
+    // incident they may access; patients must see confirmed ambulance status.
     await scopedIncident(request, id);
     return Response.json({ dispatches: await coordinationStore.listDispatches(id) });
   } catch (error) {

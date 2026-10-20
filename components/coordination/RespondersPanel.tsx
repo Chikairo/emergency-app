@@ -9,9 +9,13 @@ import type { RosterResponder } from "@/modules/responders/roster";
 export function RespondersPanel({
   incidentId,
   initial,
+  dispatcherAck = false,
 }: {
   incidentId: string;
   initial: AssignmentRecord[];
+  // Dispatchers acknowledge via the explicit dispatcher endpoint;
+  // responders self-acknowledge through their own endpoint.
+  dispatcherAck?: boolean;
 }) {
   const router = useRouter();
   const [roster, setRoster] = useState<RosterResponder[]>([]);
@@ -94,7 +98,13 @@ export function RespondersPanel({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => post(`/api/assignments/${a.id}/ack`)}
+                onClick={() =>
+                  post(
+                    dispatcherAck
+                      ? `/api/assignments/${a.id}/dispatcher-ack`
+                      : `/api/assignments/${a.id}/ack`,
+                  )
+                }
                 className="ml-2 rounded-lg border border-zinc-300 px-3 py-2 text-base font-semibold"
               >
                 Acknowledge

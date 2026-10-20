@@ -1,11 +1,11 @@
 import { audit } from "@/lib/audit";
-import { OPS_ROLES, requireRoles } from "@/lib/authz";
+import { MEDICAL_READ_ROLES, requireRoles } from "@/lib/authz";
 import { getStore, getUser, toErrorResponse } from "../_lib";
 
-// Ops listing: dispatch/system roles only.
+// Incident list for care and dispatch roles. Creation stays public below.
 export async function GET(request: Request) {
   try {
-    requireRoles(await getUser(request), OPS_ROLES);
+    requireRoles(await getUser(request), MEDICAL_READ_ROLES);
     return Response.json({ incidents: await getStore().listIncidents() });
   } catch (error) {
     return toErrorResponse(error);

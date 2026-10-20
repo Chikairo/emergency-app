@@ -20,6 +20,28 @@ export const MEDPRO_ROLES = [
 ] as const;
 export const RESPONDER_ROLES = ["RESPONDER", "DISPATCHER", "SYSTEM_ADMIN"] as const;
 export const OPS_ROLES = ["DISPATCHER", "SYSTEM_ADMIN"] as const;
+export const CALL_DOCTOR_ROLES = [
+  "MEDICAL_PROFESSIONAL",
+  "HOSPITAL_ADMIN",
+  "DISPATCHER",
+  "SYSTEM_ADMIN",
+] as const;
+// Post-sign-in landing by role. Dispatchers operate from /ops, care
+// roles from /doctor, everyone else returns to the public home. Unknown
+// roles fall through to public — never to a staff surface.
+export function landingForRole(role: string): string {
+  if ((DISPATCH_ROLES as readonly string[]).includes(role)) return "/ops";
+  if ((MEDICAL_READ_ROLES as readonly string[]).includes(role)) return "/doctor";
+  return "/";
+}
+// Read-only incident visibility for care roles (doctors, hospital staff)
+// plus dispatch roles. Responders are excluded: they see only assignments.
+export const MEDICAL_READ_ROLES = [
+  "MEDICAL_PROFESSIONAL",
+  "HOSPITAL_ADMIN",
+  "DISPATCHER",
+  "SYSTEM_ADMIN",
+] as const;
 
 export class UnauthenticatedError extends Error {
   constructor() {

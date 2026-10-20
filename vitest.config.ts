@@ -12,7 +12,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: ["node_modules", "tests/e2e/**"],
+    include: ["**/*.test.{ts,tsx}"],
+    exclude: ["node_modules", "tests/e2e/**", "**/*.spec.ts", "**/*.spec.tsx"],
     // Unit tests run against the volatile in-memory adapters, never a live
     // database — even though a local .env exists on this machine.
     env: {

@@ -1,0 +1,10 @@
+{
+	"appId": "com.emergencycare.app",
+	"appName": "Emergency Care",
+	"webDir": "public",
+	"backgroundColor": "#2B0A0A",
+	"server": {
+		"url": "https://emergency-care.example.invalid",
+		"cleartext": false
+	}
+}

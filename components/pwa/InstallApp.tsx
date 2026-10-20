@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useServiceWorker } from "./RegisterSW";
 
-// Install card for the home page: Chrome/Edge install prompt when
-// available, honest fallback guidance otherwise (including iOS Safari's
-// Share -> Add to Home Screen, which has no prompt API).
 export function InstallApp() {
-  const sw = useServiceWorker();
   const [deferred, setDeferred] = useState<Event | null>(null);
   const [installed, setInstalled] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
@@ -29,46 +26,59 @@ export function InstallApp() {
   }, []);
 
   async function install() {
-    const prompt = deferred as (Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }) | null;
-    if (!prompt) return;
-    await prompt.prompt();
-    await prompt.userChoice.catch(() => undefined);
-    setDeferred(null);
+    if (!deferred) {
+      setShowInstructions((previous) => !previous);
+      return;
+    }
+    const prompt = deferred as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: string }>;
+    };
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      setMessage(
+        choice.outcome === "accepted"
+          ? "Installation started."
+          : "Installation was cancelled.",
+      );
+      setDeferred(null);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Could not open the install prompt: ${error.message}`
+          : "Could not open the install prompt.",
+      );
+    }
   }
 
   return (
-    <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="Install the app">
-      <h2 className="text-2xl font-bold">Install the app</h2>
-      {installed ? (
-        <p className="mt-1 text-lg text-zinc-700" role="status">
-          Installed — open it from your home screen. Saved guidance works offline; emergency
-          requests still need a connection and are never sent silently.
+    <div className="flex flex-col items-center gap-2 px-4 py-5" aria-label="Install the app">
+      <button
+        type="button"
+        onClick={() => void install()}
+        aria-expanded={showInstructions}
+        aria-controls="install-instructions"
+        disabled={installed}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#d8e0e9] bg-white px-5 text-sm font-bold text-[#142b43] shadow-sm transition hover:border-[#ed343b] hover:text-[#c51f2b] disabled:cursor-default disabled:opacity-70"
+      >
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+          <path d="M10 1.5a1 1 0 0 1 1 1v7.09l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L9 9.59V2.5a1 1 0 0 1 1-1ZM3 13a1 1 0 0 1 1 1v2h12v-2a1 1 0 1 1 2 0v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z" />
+        </svg>
+        {installed ? "App installed" : "Install app"}
+      </button>
+      {message && <p className="text-xs text-[#607086]" role="status">{message}</p>}
+      {showInstructions && !installed && (
+        <p id="install-instructions" className="max-w-md text-center text-xs text-[#607086]">
+          If no install prompt appears, use your browser menu and choose “Install app” or “Add to
+          Home Screen”. On iPhone, use Share → Add to Home Screen.
         </p>
-      ) : deferred ? (
-        <>
-          <p className="mt-1 text-lg text-zinc-700">
-            Add Emergency Care to your home screen for one-tap access.
-          </p>
-          <button
-            type="button"
-            onClick={install}
-            className="mt-3 min-h-[56px] rounded-xl bg-[#7F1D1D] px-6 text-xl font-bold text-white hover:bg-[#651414]"
-          >
-            Install app
-          </button>
-        </>
-      ) : (
-        <div className="mt-1 flex flex-col gap-1 text-lg text-zinc-700">
-          <p>
-            Android / Chrome / Edge: open the browser menu and choose{" "}
-            <strong>Install app</strong> or <strong>Add to Home screen</strong>
-            {sw === "ready" ? " (offline support active)." : " (open the deployed site over HTTPS)."}
-          </p>
-          <p>
-            iPhone / Safari: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.
-          </p>
-        </div>
       )}
-    </section>
+      {installed && (
+        <p className="text-center text-xs text-[#607086]" role="status">
+          Open Emergency Care from your home screen. Emergency requests still require a connection.
+        </p>
+      )}
+    </div>
   );
 }

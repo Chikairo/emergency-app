@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FailureBanner } from "@/components/ui/FailureBanner";
 import type { ContactRecord } from "@/modules/coordination/store";
 
@@ -19,6 +19,38 @@ export function ContactsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const keyCounter = useRef(0);
+
+  async function sendWhatsApp(contactId: string) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    // Unique per tap, generated in the event handler (never during render).
+    keyCounter.current += 1;
+    const idempotencyKey = `web-${incidentId}-${contactId}-${keyCounter.current}`;
+    try {
+      const res = await fetch(`/api/incidents/${incidentId}/notify-whatsapp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId, idempotencyKey }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        notification?: { state: string };
+      };
+      if (!res.ok) throw new Error(data.error ?? "Request failed.");
+      setNotice(
+        data.notification?.state === "SENT"
+          ? "WhatsApp alert accepted by the provider (SENT — delivery not confirmed)."
+          : (data.error ?? "WhatsApp alert was not delivered."),
+      );
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function post(url: string, body?: unknown) {
     setBusy(true);
@@ -117,6 +149,14 @@ export function ContactsPanel({
               ({c.channel}) · consent {new Date(c.consentAt).toLocaleTimeString()}
               {c.lastDelivery ? ` · last: ${c.lastDelivery}` : " · not yet notified"}
             </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => sendWhatsApp(c.id)}
+              className="ml-2 rounded-lg border border-zinc-300 px-3 py-2 text-base font-semibold"
+            >
+              WhatsApp alert
+            </button>
           </li>
         ))}
       </ul>

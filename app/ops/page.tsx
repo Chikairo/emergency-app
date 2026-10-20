@@ -1,67 +1,33 @@
 import Link from "next/link";
-import { StatusPill } from "@/components/ui/StatusPill";
-import { requirePageRoles } from "@/lib/auth-server";
+import { redirect } from "next/navigation";
+import { getPageUser } from "@/lib/auth-server";
 import { OPS_ROLES } from "@/lib/authz";
 import { apiGet } from "@/lib/server-api";
-import type { IncidentRecord } from "@/modules/incidents/repository";
+import { OpsQueue, type OpsIncident } from "@/components/ops/OpsQueue";
 
 export const instant = false;
 
-// Operations view: dispatch/system roles only (redirects to sign-in).
-// Failed handoffs surface first. Data via the API, never the store.
+// Dispatch/system roles only. The incident API independently checks role
+// authorization; this page also gives signed-in non-dispatch staff a clear denial.
 export default async function OpsPage() {
-  await requirePageRoles(OPS_ROLES);
-  const { incidents } = await apiGet<{ incidents: IncidentRecord[] }>("/api/incidents");
-  const needsAttention = incidents.filter((i) =>
-    ["UNABLE_TO_CONFIRM", "REQUEST_SENT"].includes(i.status),
-  );
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-3xl font-bold">Operations</h1>
-        <p className="mt-1 text-lg text-zinc-600">
-          {incidents.length} report(s). {needsAttention.length} need attention (sent but unconfirmed).
-        </p>
-      </div>
-
-      {needsAttention.length > 0 && (
-        <section className="rounded-2xl border-2 border-[#B45309] bg-amber-50 p-5" aria-label="Needs attention">
-          <h2 className="text-2xl font-bold text-amber-900">⚠ Needs attention</h2>
-          <ul className="mt-2 flex flex-col gap-2">
-            {needsAttention.map((i) => (
-              <li key={i.id} className="text-lg">
-                <Link href={`/incidents/${i.id}`} className="font-semibold text-amber-900 underline">
-                  {i.emergencyType}
-                </Link>{" "}
-                <span className="text-amber-800">
-                  — {i.status} · {new Date(i.createdAt).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
+  const user = await getPageUser();
+  if (!user) redirect("/sign-in?next=/ops");
+  if (!(OPS_ROLES as readonly string[]).includes(user.role)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f7fb] p-6 text-[#17283c]">
+        <section className="w-full max-w-lg rounded-2xl border border-[#e7edf4] bg-white p-7 shadow-sm">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-[#c51f2b]">Access restricted</p>
+          <h1 className="mt-2 text-2xl font-extrabold text-[#142b43]">Dispatcher access required</h1>
+          <p className="mt-3 text-sm text-[#5b7286]">
+            {user.email} is signed in, but this account does not have an authorized dispatch role.
+          </p>
+          <Link href="/" className="mt-5 inline-block font-bold text-[#275da8] underline">
+            Return to Emergency Care
+          </Link>
         </section>
-      )}
-
-      <section className="rounded-2xl bg-white p-5 shadow-sm" aria-label="All reports">
-        <h2 className="text-2xl font-bold">All reports</h2>
-        <ul className="mt-3 flex flex-col gap-3">
-          {incidents.length === 0 && (
-            <li className="text-lg text-zinc-600">No reports yet. File one from the home page.</li>
-          )}
-          {incidents.map((i) => (
-            <li key={i.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 p-3">
-              <Link href={`/incidents/${i.id}`} className="text-xl font-semibold text-[#5B1414] underline">
-                {i.emergencyType}
-              </Link>
-              <StatusPill status={i.status} />
-              <span className="text-base text-zinc-500">
-                {new Date(i.createdAt).toLocaleString()} · {i.events.length} event(s)
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
+      </main>
+    );
+  }
+  const { incidents } = await apiGet<{ incidents: OpsIncident[] }>("/api/incidents");
+  return <OpsQueue initial={incidents} staffEmail={user.email} />;
 }

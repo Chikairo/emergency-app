@@ -1,0 +1,33 @@
+{
+  "name": "Emergency Care — While Help Is on the Way",
+  "short_name": "Emergency Care",
+  "description": "Report an emergency and follow safe interim guidance while professional help is arranged. Demo build with mock services.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAF6F2",
+  "theme_color": "#2B0A0A",
+  "categories": ["medical", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

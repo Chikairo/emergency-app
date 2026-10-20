@@ -72,26 +72,57 @@ export interface NotificationRecord {
   channel: string;
   template: string;
   state: CoordState;
-  provider: "mock";
+  provider: string;
   simulated: boolean;
   createdAt: Date;
 }
 
 export interface CoordinationPort {
   requestDispatch(incidentId: string, raw: unknown): Promise<DispatchRecord>;
+  getDispatch(id: string): Promise<DispatchRecord | null>;
   simulateDispatchAck(id: string): Promise<DispatchRecord>;
   simulateDispatchConfirm(id: string): Promise<DispatchRecord>;
   listDispatches(incidentId: string): Promise<DispatchRecord[]>;
+  recordDispatchDecision(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string; confirmed: boolean },
+  ): Promise<DispatchRecord>;
+  recordAmbulanceAvailability(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string },
+  ): Promise<DispatchRecord>;
+  findDispatchByIdempotencyKey(
+    incidentId: string,
+    idempotencyKey: string,
+  ): Promise<DispatchRecord | null>;
   requestMedpro(incidentId: string, idempotencyKey: string): Promise<MedproRecord>;
+  getMedpro(id: string): Promise<MedproRecord | null>;
   simulateMedproAccept(id: string): Promise<MedproRecord>;
   expireStaleMedpro(timeoutMs: number, now?: Date): Promise<number>;
   listMedpro(incidentId: string): Promise<MedproRecord[]>;
   assignResponder(incidentId: string, input: AssignmentCreateInput): Promise<AssignmentRecord>;
+  getAssignment(id: string): Promise<AssignmentRecord | null>;
   acknowledgeAssignment(id: string): Promise<AssignmentRecord>;
   listAssignments(incidentId: string): Promise<AssignmentRecord[]>;
   addContact(incidentId: string, input: ContactCreateInput): Promise<ContactRecord>;
   listContacts(incidentId: string): Promise<ContactRecord[]>;
   notifyContacts(incidentId: string): Promise<NotificationRecord[]>;
+  findSentNotification(
+    incidentId: string,
+    recipient: string,
+    template: string,
+  ): Promise<NotificationRecord | null>;
+  recordNotification(
+    incidentId: string,
+    input: {
+      channel: string;
+      recipient: string;
+      template: string;
+      provider: string;
+      state: "SENT" | "FAILED" | "DELIVERED";
+      messageId?: string;
+    },
+  ): Promise<NotificationRecord>;
 }
 
 export class CoordinationStore implements CoordinationPort {
@@ -133,6 +164,11 @@ export class CoordinationStore implements CoordinationPort {
     return rec;
   }
 
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getDispatch(id: string): Promise<DispatchRecord | null> {
+    return this.dispatches.get(id) ?? null;
+  }
+
   /** Dev-only: pretend the named service acknowledged. Flagged simulated. */
   async simulateDispatchAck(id: string): Promise<DispatchRecord> {
     const rec = this.mustDispatch(id);
@@ -157,6 +193,72 @@ export class CoordinationStore implements CoordinationPort {
 
   async listDispatches(incidentId: string): Promise<DispatchRecord[]> {
     return [...this.dispatches.values()].filter((d) => d.incidentId === incidentId);
+  }
+
+  /**
+   * Human dispatch decision (real incidents only). Creates a SENT request and
+   * immediately records the authorized outcome — ACCEPTED or DECLINED — with
+   * simulated:false, because a person decided, not a mock. Idempotent.
+   */
+  async recordDispatchDecision(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string; confirmed: boolean },
+  ): Promise<DispatchRecord> {
+    const seen = this.dispatchKeys.get(`${incidentId}:${input.idempotencyKey}`);
+    if (seen) {
+      const existing = this.dispatches.get(seen);
+      if (existing) return existing;
+    }
+    const now = new Date();
+    const rec: DispatchRecord = {
+      id: randomUUID(),
+      incidentId,
+      targetType: "ambulance-partner",
+      targetName: input.targetName,
+      state: input.confirmed ? "ACCEPTED" : "DECLINED",
+      attempts: 1,
+      simulated: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.dispatches.set(rec.id, rec);
+    this.dispatchKeys.set(`${incidentId}:${input.idempotencyKey}`, rec.id);
+    return rec;
+  }
+
+  async recordAmbulanceAvailability(
+    incidentId: string,
+    input: { targetName: string; idempotencyKey: string },
+  ): Promise<DispatchRecord> {
+    const key = `${incidentId}:${input.idempotencyKey}`;
+    const seen = this.dispatchKeys.get(key);
+    if (seen) {
+      const existing = this.dispatches.get(seen);
+      if (existing) return existing;
+    }
+    const now = new Date();
+    const rec: DispatchRecord = {
+      id: randomUUID(),
+      incidentId,
+      targetType: "ambulance-partner",
+      targetName: input.targetName,
+      state: "ACKNOWLEDGED",
+      attempts: 1,
+      simulated: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.dispatches.set(rec.id, rec);
+    this.dispatchKeys.set(key, rec.id);
+    return rec;
+  }
+
+  async findDispatchByIdempotencyKey(
+    incidentId: string,
+    idempotencyKey: string,
+  ): Promise<DispatchRecord | null> {
+    const id = this.dispatchKeys.get(`${incidentId}:${idempotencyKey}`);
+    return id ? this.dispatches.get(id) ?? null : null;
   }
 
   private mustDispatch(id: string): DispatchRecord {
@@ -185,6 +287,11 @@ export class CoordinationStore implements CoordinationPort {
     this.medpros.set(rec.id, rec);
     this.medproKeys.set(`${incidentId}:${idempotencyKey}`, rec.id);
     return rec;
+  }
+
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getMedpro(id: string): Promise<MedproRecord | null> {
+    return this.medpros.get(id) ?? null;
   }
 
   /** Dev-only: pretend a professional accepted. Flagged simulated. */
@@ -250,6 +357,11 @@ export class CoordinationStore implements CoordinationPort {
     return rec;
   }
 
+  /** Scoped read for authorization: returns the record for incident binding. */
+  async getAssignment(id: string): Promise<AssignmentRecord | null> {
+    return this.assignments.get(id) ?? null;
+  }
+
   async acknowledgeAssignment(id: string): Promise<AssignmentRecord> {
     const rec = this.assignments.get(id);
     if (!rec) throw new Error(`Assignment not found: ${id}`);
@@ -288,21 +400,59 @@ export class CoordinationStore implements CoordinationPort {
   async notifyContacts(incidentId: string): Promise<NotificationRecord[]> {
     const sent: NotificationRecord[] = [];
     for (const c of await this.listContacts(incidentId)) {
-      const n: NotificationRecord = {
-        id: randomUUID(),
-        incidentId,
-        recipient: c.address,
-        channel: c.channel,
-        template: "incident-update",
-        state: "SENT",
-        provider: "mock",
-        simulated: true,
-        createdAt: new Date(),
-      };
-      this.notifications.push(n);
+      sent.push(
+        await this.recordNotification(incidentId, {
+          channel: c.channel,
+          recipient: c.address,
+          template: "incident-update",
+          provider: "mock",
+          state: "SENT",
+        }),
+      );
       c.lastDelivery = "SENT";
-      sent.push(n);
     }
     return sent;
+  }
+
+  async recordNotification(
+    incidentId: string,
+    input: {
+      channel: string;
+      recipient: string;
+      template: string;
+      provider: string;
+      state: "SENT" | "FAILED" | "DELIVERED";
+      messageId?: string;
+    },
+  ): Promise<NotificationRecord> {
+    const rec: NotificationRecord = {
+      id: randomUUID(),
+      incidentId,
+      recipient: input.recipient,
+      channel: input.channel,
+      template: input.template,
+      state: input.state,
+      provider: input.provider,
+      simulated: input.provider === "mock",
+      createdAt: new Date(),
+    };
+    this.notifications.push(rec);
+    return rec;
+  }
+
+  async findSentNotification(
+    incidentId: string,
+    recipient: string,
+    template: string,
+  ): Promise<NotificationRecord | null> {
+    return (
+      this.notifications.find(
+        (n) =>
+          n.incidentId === incidentId &&
+          n.recipient === recipient &&
+          n.template === template &&
+          n.state === "SENT",
+      ) ?? null
+    );
   }
 }

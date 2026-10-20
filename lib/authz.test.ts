@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   DISPATCH_ROLES,
   ForbiddenRoleError,
+  MEDICAL_READ_ROLES,
   OPS_ROLES,
   UnauthenticatedError,
   canAccessIncident,
   isStaff,
+  landingForRole,
   requireRoles,
 } from "./authz";
 
@@ -30,6 +32,14 @@ describe("RBAC helpers (pure, no I/O)", () => {
     expect(requireRoles(staff, DISPATCH_ROLES)).toBe(staff);
   });
 
+  it("grants incident-list reads to care roles but not responders", () => {
+    const medical = { id: "m", email: "m@x.com", role: "MEDICAL_PROFESSIONAL", facilityId: null };
+    const responder = { id: "r", email: "r@x.com", role: "RESPONDER", facilityId: null };
+    expect(requireRoles(medical, MEDICAL_READ_ROLES)).toBe(medical);
+    expect(() => requireRoles(responder, MEDICAL_READ_ROLES)).toThrow(ForbiddenRoleError);
+    expect(() => requireRoles(null, MEDICAL_READ_ROLES)).toThrow(UnauthenticatedError);
+  });
+
   it("lets staff read anything, owners read their own", () => {
     expect(canAccessIncident(staff, { reporter: "someone" })).toBe(true);
     expect(canAccessIncident(owner, { reporter: "o" })).toBe(true);
@@ -39,5 +49,17 @@ describe("RBAC helpers (pure, no I/O)", () => {
   it("keeps the no-login urgent flow on anonymous reports only", () => {
     expect(canAccessIncident(null, { reporter: null })).toBe(true);
     expect(canAccessIncident(null, { reporter: "o" })).toBe(false);
+  });
+
+  it("lands each role on the right surface, never staff for public", () => {
+    expect(landingForRole("DISPATCHER")).toBe("/ops");
+    expect(landingForRole("SYSTEM_ADMIN")).toBe("/ops");
+    expect(landingForRole("MEDICAL_PROFESSIONAL")).toBe("/doctor");
+    expect(landingForRole("HOSPITAL_ADMIN")).toBe("/doctor");
+    expect(landingForRole("RESPONDER")).toBe("/");
+    expect(landingForRole("BYSTANDER")).toBe("/");
+    expect(landingForRole("PATIENT")).toBe("/");
+    expect(landingForRole("")).toBe("/");
+    expect(landingForRole("SUPERUSER")).toBe("/");
   });
 });
