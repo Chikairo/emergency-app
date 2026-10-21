@@ -1,14 +1,24 @@
-# Builds a debug Android APK with Capacitor (no local SDK needed).
+# Builds and publishes a sideloadable beta Android APK with Capacitor
+# (no local SDK or signing secrets needed).
 # The app shell loads the deployed public backend over HTTPS; nothing is
 # bundled except a static fallback page. No secrets are used or logged:
 # the build needs no .env, database, or credentials of any kind.
 #
-# Run: Actions tab -> "Android APK (debug)" -> Run workflow -> download
-# the `emergency-care-debug-apk` artifact (app-debug.apk inside).
-name: Android APK (debug)
+# Run from the main branch: Actions -> "Android APK (beta)" -> Run workflow.
+# The APK is attached to the GitHub Release named by `release_tag`.
+name: Android APK (beta)
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Unique release tag for this APK (for example android-v0.1.0)
+        required: true
+        default: android-v0.1.0
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,11 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -45,15 +55,28 @@ jobs:
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build beta APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK artifact
+      - name: Name APK for release
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/emergency-care-android.apk
+
+      - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: emergency-care-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: emergency-care-android-beta
+          path: android/app/build/outputs/apk/debug/emergency-care-android.apk
           if-no-files-found: error
+
+      - name: Publish APK download release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: Emergency Care Android beta (${{ inputs.release_tag }})
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: android/app/build/outputs/apk/debug/emergency-care-android.apk
