@@ -54,6 +54,9 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Clear tracked sync-only Android assets
+        run: rm -rf android
+
       - name: Add Android platform
         run: npx cap add android
 
