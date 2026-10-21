@@ -4,11 +4,14 @@
 # bundled except a static fallback page. No secrets are used or logged:
 # the build needs no .env, database, or credentials of any kind.
 #
-# Run from the main branch: Actions -> "Android APK (beta)" -> Run workflow.
-# The APK is attached to the GitHub Release named by `release_tag`.
+# Push an android-v* tag or run manually from the main branch. The APK is
+# attached to the GitHub Release for that tag.
 name: Android APK (beta)
 
 on:
+  push:
+    tags:
+      - "android-v*"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -74,8 +77,8 @@ jobs:
       - name: Publish APK download release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag }}
-          name: Emergency Care Android beta (${{ inputs.release_tag }})
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          name: Emergency Care Android beta (${{ inputs.release_tag || github.ref_name }})
           prerelease: true
           generate_release_notes: true
           fail_on_unmatched_files: true
