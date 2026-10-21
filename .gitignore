@@ -11,6 +11,7 @@ coverage/
 .env.local
 .env.*.local
 !.env.example
+/cookies.txt
 
 # Prisma (migration_lock.toml is intentionally tracked: it pins the
 # database provider for migrate commands)
