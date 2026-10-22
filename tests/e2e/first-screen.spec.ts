@@ -9,6 +9,10 @@ test("first screen prioritizes emergency action and type choices", async ({ page
     page.getByRole("button", { name: "Report an emergency now" }).first(),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Staff sign in" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Staff sign in" })).toHaveAttribute(
+    "href",
+    "/sign-in?next=/ops",
+  );
   for (const label of ["Unconscious", "Severe bleeding", "Can't breathe", "Something else"]) {
     await expect(page.getByRole("link", { name: new RegExp(label) }).first()).toBeVisible();
   }

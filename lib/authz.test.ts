@@ -8,6 +8,7 @@ import {
   canAccessIncident,
   isStaff,
   landingForRole,
+  postSignInPath,
   requireRoles,
 } from "./authz";
 
@@ -61,5 +62,11 @@ describe("RBAC helpers (pure, no I/O)", () => {
     expect(landingForRole("PATIENT")).toBe("/");
     expect(landingForRole("")).toBe("/");
     expect(landingForRole("SUPERUSER")).toBe("/");
+  });
+
+  it("honors the protected operations return path without accepting arbitrary URLs", () => {
+    expect(postSignInPath("", "/ops")).toBe("/ops");
+    expect(postSignInPath("BYSTANDER", "https://example.com")).toBe("/");
+    expect(postSignInPath("DISPATCHER", null)).toBe("/ops");
   });
 });

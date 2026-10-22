@@ -34,6 +34,11 @@ export function landingForRole(role: string): string {
   if ((MEDICAL_READ_ROLES as readonly string[]).includes(role)) return "/doctor";
   return "/";
 }
+
+export function postSignInPath(role: string, requestedPath: string | null): string {
+  if (requestedPath === "/ops") return "/ops";
+  return landingForRole(role);
+}
 // Read-only incident visibility for care roles (doctors, hospital staff)
 // plus dispatch roles. Responders are excluded: they see only assignments.
 export const MEDICAL_READ_ROLES = [

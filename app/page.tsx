@@ -54,7 +54,7 @@ export default function Home() {
             Client app
           </Link>
           <Link
-            href="/sign-in"
+            href="/sign-in?next=/ops"
             aria-label="Staff sign in"
             className="min-h-10 rounded-[8px] border-0 bg-transparent px-3 py-2 text-xs font-bold text-[#607086] transition-colors hover:bg-white/50 sm:px-[13px] sm:text-sm"
           >

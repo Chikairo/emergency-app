@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
-import { landingForRole } from "@/lib/authz";
+import { postSignInPath } from "@/lib/authz";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -29,7 +29,8 @@ export default function SignInPage() {
               return;
             }
             const role = "role" in data.user ? data.user.role : undefined;
-            router.replace(landingForRole(typeof role === "string" ? role : ""));
+            const requestedPath = new URLSearchParams(window.location.search).get("next");
+            router.replace(postSignInPath(typeof role === "string" ? role : "", requestedPath));
             router.refresh();
           },
           onError: (ctx) => setError(ctx.error.message || "Sign-in failed. Check your email and password."),
