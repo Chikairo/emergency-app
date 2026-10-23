@@ -14,7 +14,7 @@ test("first screen prioritizes emergency action and type choices", async ({ page
     "/sign-in?next=/ops",
   );
   for (const label of ["Unconscious", "Severe bleeding", "Can't breathe", "Something else"]) {
-    await expect(page.getByRole("link", { name: new RegExp(label) }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(label) }).first()).toBeVisible();
   }
   await expect(page.locator("form")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Install app" })).toBeVisible();

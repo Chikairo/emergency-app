@@ -8,21 +8,25 @@ const GUIDANCE_CARDS = [
   {
     slug: "severe-bleeding",
     title: "Severe bleeding",
+    emergencyType: "Severe bleeding",
     icon: "🩸",
   },
   {
     slug: "difficulty-breathing",
     title: "Can't breathe",
+    emergencyType: "Difficulty breathing",
     icon: "🫁",
   },
   {
     slug: "unconscious",
     title: "Unconscious person",
+    emergencyType: "Unconscious person",
     icon: "🧍",
   },
   {
     slug: "other",
     title: "Something else",
+    emergencyType: "Other emergency",
     icon: "⚠️",
   },
 ];
@@ -80,9 +84,8 @@ export default function Home() {
             </p>
             <div className="mb-[24px] grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-[10px]">
               {GUIDANCE_CARDS.map((card) => (
-                <Link
+                <div
                   key={card.slug}
-                  href={`/help/${card.slug}`}
                   className="flex min-w-0 flex-col items-center gap-1 rounded-[16px] border border-[#e7edf4] bg-white p-3 text-center shadow-sm transition-colors hover:border-[#f2a3a6] hover:bg-[#fff8f8] sm:rounded-[18px] sm:p-[13px]"
                 >
                   <span className="text-2xl">{card.icon}</span>
@@ -96,7 +99,14 @@ export default function Home() {
                           ? "Not awake or responding"
                           : "Any other emergency"}
                   </span>
-                </Link>
+                  <EmergencyStartButton
+                    emergencyType={card.emergencyType}
+                    ariaLabel={card.title}
+                    label={card.title}
+                    small
+                    className="mt-2 w-full min-h-[42px] rounded-[10px] border border-[#e7edf4] bg-[#fff8f8] px-3 py-2 text-[10px] font-black text-[#17283c] shadow-sm transition-colors hover:border-[#f2a3a6] hover:bg-[#fff2f2] disabled:cursor-wait disabled:opacity-70"
+                  />
+                </div>
               ))}
             </div>
           </div>

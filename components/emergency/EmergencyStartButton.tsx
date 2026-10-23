@@ -1,64 +1,112 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+
+interface EmergencyStartButtonProps {
+  emergencyType?: string;
+  label?: ReactNode;
+  ariaLabel?: string;
+  className?: string;
+  small?: boolean;
+}
+
+async function createEmergencyReport(
+  router: ReturnType<typeof useRouter>,
+  emergencyType: string,
+  keyRef: React.MutableRefObject<string | null>,
+  setPending: (value: boolean) => void,
+  setError: (value: string | null) => void,
+) {
+  if (keyRef.current === null) {
+    keyRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `web-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  }
+
+  try {
+    const res = await fetch("/api/incidents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        affectsSelf: true,
+        emergencyType,
+        triage: [],
+        idempotencyKey: keyRef.current,
+      }),
+    });
+    const data = (await res.json()) as { incident?: { id: string }; error?: string };
+    if (!res.ok || !data.incident) {
+      throw new Error(data.error ?? "Could not start your emergency request. Nothing was sent.");
+    }
+    router.push(`/incidents/${data.incident.id}/waiting`);
+  } catch (e) {
+    setError(e instanceof Error ? e.message : "Could not start your emergency request.");
+    setPending(false);
+  }
+}
 
 // One-tap emergency start: creates the incident immediately through the
 // existing incident API, then moves to the waiting screen. No questionnaire,
 // no description field. The idempotency key is stable across retries so
 // double-taps and slow networks can never fork duplicate incidents.
-export function EmergencyStartButton() {
+export function EmergencyStartButton({
+  emergencyType = "Unspecified emergency",
+  label,
+  ariaLabel,
+  className,
+  small = false,
+}: EmergencyStartButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const keyRef = useRef<string | null>(null);
 
+  const resolvedLabel = label ?? (small ? "Send alert" : <>I NEED<br />EMERGENCY HELP</>);
+  const resolvedAriaLabel = ariaLabel ?? (typeof resolvedLabel === "string" ? resolvedLabel : "Report an emergency now");
+
   async function startNow() {
     if (pending) return;
     setPending(true);
     setError(null);
-    if (keyRef.current === null) {
-      keyRef.current =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `web-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-    }
-    try {
-      const res = await fetch("/api/incidents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          affectsSelf: true,
-          emergencyType: "Unspecified emergency",
-          triage: [],
-          idempotencyKey: keyRef.current,
-        }),
-      });
-      const data = (await res.json()) as { incident?: { id: string }; error?: string };
-      if (!res.ok || !data.incident) {
-        throw new Error(data.error ?? "Could not start your emergency request. Nothing was sent.");
-      }
-      router.push(`/incidents/${data.incident.id}/waiting`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start your emergency request.");
-      setPending(false);
-    }
+    await createEmergencyReport(router, emergencyType, keyRef, setPending, setError);
+  }
+
+  if (small) {
+    return (
+      <button
+        type="button"
+        onClick={() => void startNow()}
+        disabled={pending}
+        aria-label={resolvedAriaLabel}
+        className={
+          className ??
+          "flex min-h-[44px] w-full items-center justify-center rounded-[12px] border border-[#e7edf4] bg-white px-3 py-2 text-center text-[11px] font-black text-[#17283c] shadow-sm transition-colors hover:border-[#f2a3a6] hover:bg-[#fff8f8] disabled:cursor-wait disabled:opacity-70"
+        }
+      >
+        {pending ? "Sending…" : resolvedLabel}
+      </button>
+    );
   }
 
   return (
     <div className="flex flex-col items-center gap-[2px]">
       <button
         type="button"
-        onClick={startNow}
+        onClick={() => void startNow()}
         disabled={pending}
-        aria-label="Report an emergency now"
-        className="group relative flex aspect-square w-[clamp(10rem,20vw,12.5rem)] flex-col items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff4b52] to-[#ed343b] px-4 text-white shadow-[0_18px_36px_rgba(237,52,59,0.28)] ring-8 ring-[#ed343b]/10 transition-transform hover:scale-[1.03] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#ed343b]"
+        aria-label={resolvedAriaLabel}
+        className={
+          className ??
+          "group relative flex aspect-square w-[clamp(10rem,20vw,12.5rem)] flex-col items-center justify-center gap-2 rounded-full bg-gradient-to-br from-[#ff4b52] to-[#ed343b] px-4 text-white shadow-[0_18px_36px_rgba(237,52,59,0.28)] ring-8 ring-[#ed343b]/10 transition-transform hover:scale-[1.03] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-[#ed343b]"
+        }
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-8 w-8 fill-current">
           <path d="M12 2a2 2 0 0 0-2 2v.36A7 7 0 0 0 6 10v4l-1.4 2.1A1 1 0 0 0 5.43 18h13.14a1 1 0 0 0 .83-1.9L18 14v-4a7 7 0 0 0-4-5.64V4a2 2 0 0 0-2-2Zm-3 18a3 3 0 0 0 6 0H9Z" />
         </svg>
         <span className="text-center text-base font-black leading-tight sm:text-[17px]">
-          {pending ? "SENDING ALERT…" : <>I NEED<br />EMERGENCY HELP</>}
+          {pending ? "SENDING ALERT…" : resolvedLabel}
         </span>
       </button>
       <p className="mt-[10px] text-[12px] text-[#718096]">Tap to start emergency support</p>
