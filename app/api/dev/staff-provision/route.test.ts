@@ -49,7 +49,7 @@ describe("local staff provisioning route", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it("promotes only the authenticated local regular account to dispatcher", async () => {
+  it("promotes only the authenticated local regular account to system administrator", async () => {
     mockUser.value = {
       id: "local-user",
       email: "dispatcher@example.test",
@@ -60,10 +60,10 @@ describe("local staff provisioning route", () => {
     const response = await POST(makeRequest());
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ role: "DISPATCHER" });
+    expect(await response.json()).toEqual({ role: "SYSTEM_ADMIN" });
     expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: "local-user" },
-      data: { role: "DISPATCHER" },
+      data: { role: "SYSTEM_ADMIN" },
     });
   });
 

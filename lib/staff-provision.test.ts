@@ -1,24 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { ELEVABLE_ROLES, isLocalDatabaseUrl, parsePromoteArgs } from "./staff-provision";
+import { isLocalDatabaseUrl, parsePromoteArgs } from "./staff-provision";
 
 describe("staff provisioning guards (pure, no I/O)", () => {
-  it("never elevates to public roles", () => {
-    expect(ELEVABLE_ROLES).not.toContain("BYSTANDER");
-    expect(ELEVABLE_ROLES).not.toContain("PATIENT");
-  });
-
-  it("parses and normalizes valid elevation requests", () => {
-    expect(parsePromoteArgs(["dispatcher@example.com", "dispatcher"])).toEqual({
-      email: "dispatcher@example.com",
-      role: "DISPATCHER",
+  it("sets all explicitly provisioned staff to system administrator", () => {
+    expect(parsePromoteArgs(["staff@example.com"])).toEqual({
+      email: "staff@example.com",
     });
   });
 
-  it("rejects missing args, bad roles, and malformed input", () => {
+  it("rejects missing arguments and role overrides", () => {
     expect(() => parsePromoteArgs([])).toThrow(/usage/i);
-    expect(() => parsePromoteArgs(["a@x.com"])).toThrow(/usage/i);
-    expect(() => parsePromoteArgs(["a@x.com", "BYSTANDER"])).toThrow(/one of/i);
-    expect(() => parsePromoteArgs(["a@x.com", "SUPERUSER"])).toThrow(/one of/i);
+    expect(() => parsePromoteArgs(["a@x.com", "DISPATCHER"])).toThrow(/usage/i);
   });
 
   it("accepts only loopback database URLs", () => {

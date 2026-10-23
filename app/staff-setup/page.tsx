@@ -17,7 +17,7 @@ export default function StaffSetupPage() {
           Staff access
         </p>
         <h1 className="mt-2 text-2xl font-black text-[#142b43]">
-          Set up a dispatcher account
+          Set up a system administrator account
         </h1>
       </div>
       {enabled ? (
@@ -26,7 +26,7 @@ export default function StaffSetupPage() {
         <section className="rounded-[18px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
           <h2 className="text-lg font-extrabold">Local staff setup is disabled</h2>
           <p className="mt-2 text-sm leading-relaxed">
-            This page only creates a dispatcher account in development when the app is connected
+            This page only creates a system administrator account in development when the app is connected
             to a loopback database. The current database configuration does not meet that
             requirement, so no account was created.
           </p>

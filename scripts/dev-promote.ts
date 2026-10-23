@@ -6,7 +6,7 @@
 // it cannot touch staging or production data. Seeded staff rows carry no
 // passwords and can never sign in; elevate a real sign-up instead.
 //
-// Usage: npx tsx scripts/dev-promote.ts user@example.com DISPATCHER
+// Usage: npx tsx scripts/dev-promote.ts user@example.com
 import { PrismaClient } from "@prisma/client";
 import { isLocalDatabaseUrl, parsePromoteArgs } from "../lib/staff-provision";
 
@@ -19,7 +19,7 @@ async function main(): Promise<void> {
     console.error("dev-promote refuses: DATABASE_URL is not a loopback database.");
     process.exit(1);
   }
-  let args: { email: string; role: string };
+  let args: { email: string };
   try {
     args = parsePromoteArgs(process.argv.slice(2));
   } catch (error) {
@@ -35,9 +35,9 @@ async function main(): Promise<void> {
     }
     await prisma.user.update({
       where: { email: args.email },
-      data: { role: args.role as never },
+      data: { role: "SYSTEM_ADMIN" },
     });
-    console.log(`Elevated ${args.email} to ${args.role} on the local dev database.`);
+    console.log(`Elevated ${args.email} to SYSTEM_ADMIN on the local dev database.`);
   } finally {
     await prisma.$disconnect();
   }

@@ -32,13 +32,13 @@ export function LocalStaffSetupForm() {
       if (!response.ok) {
         throw new Error(
           body.error ??
-            "The account was created, but local dispatcher access could not be enabled.",
+            "The account was created, but local system administrator access could not be enabled.",
         );
       }
 
       const session = await authClient.getSession();
       if (session.error || !session.data?.user) {
-        throw new Error("Dispatcher access was enabled, but sign-in could not be verified.");
+        throw new Error("System administrator access was enabled, but sign-in could not be verified.");
       }
       router.replace("/ops");
       router.refresh();
@@ -55,10 +55,10 @@ export function LocalStaffSetupForm() {
 
   return (
     <section className="rounded-[18px] border border-[#e7edf4] bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-lg font-extrabold text-[#142b43]">Create local dispatcher account</h2>
+      <h2 className="text-lg font-extrabold text-[#142b43]">Create local system administrator account</h2>
       <p className="mb-5 mt-2 text-sm leading-relaxed text-[#718096]">
         Development setup only. This account is created with your password and assigned the
-        dispatcher role on this local database.
+        system administrator role on this local database.
       </p>
       {error && (
         <p
@@ -111,7 +111,7 @@ export function LocalStaffSetupForm() {
           disabled={pending}
           className="mt-2 min-h-[52px] w-full rounded-[11px] bg-[#ed343b] px-5 text-base font-bold text-white transition-colors hover:bg-[#c51f2b] disabled:cursor-wait disabled:opacity-60"
         >
-          {pending ? "Creating local account…" : "Create dispatcher account"}
+          {pending ? "Creating local account…" : "Create system administrator account"}
         </button>
       </form>
       <p className="mt-4 text-xs leading-relaxed text-[#718096]">

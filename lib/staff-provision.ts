@@ -1,25 +1,13 @@
-// Pure helpers for the dev-only staff-promotion script. No I/O here so
-// the guards stay unit-testable; the script itself owns all writes.
+// Pure helpers for dev-only staff provisioning. No I/O here so the guards
+// stay unit-testable; the script itself owns all writes.
 
-export const ELEVABLE_ROLES = [
-  "RESPONDER",
-  "MEDICAL_PROFESSIONAL",
-  "DISPATCHER",
-  "HOSPITAL_ADMIN",
-  "SYSTEM_ADMIN",
-] as const;
-
-/** Parse `dev-promote.ts <email> <ROLE>`; throws a usage error otherwise. */
-export function parsePromoteArgs(argv: string[]): { email: string; role: string } {
-  const [email, role] = argv;
-  if (!email || !role) {
-    throw new Error("Usage: tsx scripts/dev-promote.ts <email> <ROLE>");
+/** Parse `dev-promote.ts <email>`; all explicitly provisioned staff are admins. */
+export function parsePromoteArgs(argv: string[]): { email: string } {
+  const [email, ...extraArgs] = argv;
+  if (!email || extraArgs.length > 0) {
+    throw new Error("Usage: tsx scripts/dev-promote.ts <email>");
   }
-  const normalizedRole = role.trim().toUpperCase();
-  if (!(ELEVABLE_ROLES as readonly string[]).includes(normalizedRole)) {
-    throw new Error(`Role must be one of: ${ELEVABLE_ROLES.join(", ")}`);
-  }
-  return { email: email.trim(), role: normalizedRole };
+  return { email: email.trim() };
 }
 
 /** True only for loopback database URLs. Empty or remote URLs refuse. */

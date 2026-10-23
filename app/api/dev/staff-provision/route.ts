@@ -49,14 +49,14 @@ export async function POST(request: Request) {
   try {
     await db.user.update({
       where: { id: user.id },
-      data: { role: "DISPATCHER" },
+      data: { role: "SYSTEM_ADMIN" },
     });
   } catch {
     return Response.json(
-      { error: "The local account was created, but dispatcher access could not be enabled." },
+      { error: "The local account was created, but system administrator access could not be enabled." },
       { status: 500 },
     );
   }
 
-  return Response.json({ role: "DISPATCHER" });
+  return Response.json({ role: "SYSTEM_ADMIN" });
 }

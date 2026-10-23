@@ -68,9 +68,9 @@ test("staff account setup is linked from sign-in and reports when local-only set
   );
   await page.goto("/staff-setup");
   await expect(page).toHaveURL(/\/staff-setup$/);
-  await expect(page.getByRole("heading", { name: "Set up a dispatcher account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set up a system administrator account" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Local staff setup is disabled" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create dispatcher account" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create system administrator account" })).toHaveCount(0);
 });
 
 test("severe bleeding shows existing reviewed-pending steps honestly", async ({ page }) => {

@@ -46,7 +46,7 @@ in development. No paid SaaS required to run locally.
 6. `npm.cmd run db:migrate` then `npm.cmd run db:seed` (fictional data only).
 7. `npm.cmd run dev` → http://localhost:3000, health at `/api/health`.
 8. Open `/sign-in` and choose **Create staff account** to create a local
-   dispatcher account. This setup is enabled only when `NODE_ENV=development`
+   system administrator account. This setup is enabled only when `NODE_ENV=development`
    and `DATABASE_URL` points to a loopback PostgreSQL host (`localhost`,
    `127.0.0.1`, or `::1`). Public registration still creates regular accounts,
    never staff accounts. The staff setup is disabled for hosted databases and
