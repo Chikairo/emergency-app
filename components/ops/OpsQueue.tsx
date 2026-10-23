@@ -111,9 +111,11 @@ function isIncoming(status: IncidentStatus): boolean {
 export function OpsQueue({
   initial,
   staffEmail,
+  isSystemAdmin,
 }: {
   initial: OpsIncident[];
   staffEmail: string;
+  isSystemAdmin: boolean;
 }) {
   const router = useRouter();
   const storageKey = `emergency-ops-alerts:${staffEmail}`;
@@ -364,6 +366,14 @@ export function OpsQueue({
               </div>
             </div>
             <div className="flex items-center gap-3 max-[400px]:w-full max-[400px]:justify-end">
+              {isSystemAdmin && (
+                <Link
+                  href="/ops/staff"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-[#d8e0e9] bg-white px-3 text-sm font-bold text-[#142b43] hover:bg-[#f5f7fb]"
+                >
+                  Staff access
+                </Link>
+              )}
               <div className="hidden text-right sm:block">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#718096]">Signed in as</p>
                 <p className="max-w-52 truncate text-sm font-bold text-[#142b43]">{staffEmail}</p>

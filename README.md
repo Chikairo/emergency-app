@@ -52,6 +52,26 @@ in development. No paid SaaS required to run locally.
    never staff accounts. The staff setup is disabled for hosted databases and
    production.
 
+### Production staff access
+
+Public registration never grants staff permissions. For the first production
+administrator, use the production database provider's SQL console while signed
+in as an authorized database operator, replacing the example email with the
+registered account:
+
+```sql
+UPDATE "User"
+SET role = 'SYSTEM_ADMIN'::"Role", "updatedAt" = NOW()
+WHERE LOWER(email) = LOWER('admin@example.com')
+RETURNING email, role;
+```
+
+Confirm exactly one account is returned. After the first administrator can sign
+in, use **Staff access** from `/ops` to grant system administrator permissions
+to other already-registered staff accounts. The route is restricted to a
+currently authorized system administrator and records each promotion in the
+audit log.
+
 Database reset: `npm.cmd run db:reset` (drops + re-migrates + reseeds), or
 `docker compose down -v` for a full wipe including the extension.
 

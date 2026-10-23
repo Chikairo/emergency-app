@@ -29,5 +29,11 @@ export default async function OpsPage() {
     );
   }
   const { incidents } = await apiGet<{ incidents: OpsIncident[] }>("/api/incidents");
-  return <OpsQueue initial={incidents} staffEmail={user.email} />;
+  return (
+    <OpsQueue
+      initial={incidents}
+      staffEmail={user.email}
+      isSystemAdmin={user.role === "SYSTEM_ADMIN"}
+    />
+  );
 }
