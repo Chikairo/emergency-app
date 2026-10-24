@@ -1,4 +1,4 @@
-/* Emergency Care service worker (hand-rolled, no dependencies).
+/* FirstLink service worker (hand-rolled, no dependencies).
  *
  * Caching policy — privacy first:
  * - Precache: app shell (/, /offline), guidance pages + guidance API
@@ -10,7 +10,7 @@
  *   endpoints, or any response carrying a Set-Cookie header.
  */
 
-const VERSION = "ec-v1";
+const VERSION = "firstlink-v1";
 const SHELL = ["/", "/offline", "/guidance", "/manifest.webmanifest"];
 const GUIDANCE_SLUGS = ["sample-bleeding", "sample-choking"];
 
