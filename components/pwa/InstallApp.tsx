@@ -104,7 +104,7 @@ export function InstallApp() {
               <p className="mt-1">
                 Prefer the Android beta app?{" "}
                 <a
-                  href="https://github.com/Chikairo/emergency-app/releases/latest/download/emergency-care-android.apk"
+                  href="https://github.com/Chikairo/emergency-app/releases/download/android-v0.1.3/emergency-care-android.apk"
                   className="font-semibold text-[#275da8] underline"
                   rel="noreferrer"
                   target="_blank"

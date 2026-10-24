@@ -106,7 +106,7 @@ test("install button gives Android browser installation instructions", async ({ 
   await expect(page.getByText(/Add to Home screen/i)).toBeVisible();
   await expect(page.getByRole("link", { name: "Download the APK" })).toHaveAttribute(
     "href",
-    "https://github.com/Chikairo/emergency-app/releases/latest/download/emergency-care-android.apk",
+    "https://github.com/Chikairo/emergency-app/releases/download/android-v0.1.3/emergency-care-android.apk",
   );
 });
 
