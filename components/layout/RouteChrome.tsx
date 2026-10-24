@@ -9,6 +9,7 @@ function usesStandaloneLayout(pathname: string): boolean {
     pathname === "/sign-in" ||
     pathname === "/staff-setup" ||
     pathname === "/ops" ||
+    pathname === "/ops/staff" ||
     /\/incidents\/[^/]+\/(waiting|consult)$/.test(pathname)
   );
 }
@@ -30,7 +31,7 @@ export function RouteChrome({
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="grid h-2 w-2 place-items-center rounded-full bg-[#ed343b]" />
-            <p className="text-2xl font-bold leading-7">Emergency Care</p>
+            <p className="text-2xl font-bold leading-7">FirstLink</p>
           </div>
           <span className="rounded-full border border-red-200/50 px-3 py-1 text-sm font-semibold text-red-100">
             MOCK
@@ -41,7 +42,7 @@ export function RouteChrome({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6 pb-28">
         <main className="flex flex-1 flex-col gap-6">{children}</main>
         <footer className="rounded-2xl bg-[#1e293b] p-5 text-base text-red-50">
-          <p className="font-semibold">Emergency Care — demo build (mock services).</p>
+          <p className="font-semibold">FirstLink — demo build (mock services).</p>
           <p className="mt-1">
             Not a replacement for emergency numbers or hospitals. Always call your local
             emergency number directly in a real emergency.

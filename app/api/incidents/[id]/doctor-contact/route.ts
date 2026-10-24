@@ -2,7 +2,7 @@ import { normalizeWhatsAppNumber, whatsAppChatUrl } from "@/modules/demo/doctor"
 import { scopedIncident, toErrorResponse } from "../../../_lib";
 
 const EMERGENCY_WHATSAPP_TEXT =
-  "Hello, I am with someone having an emergency and need medical guidance. (Sent from Emergency Care.)";
+  "Hello, I am with someone having an emergency and need medical guidance. (Sent from FirstLink.)";
 
 // Emergency-scoped doctor contact. The number comes only from the
 // server-side DOCTOR_WHATSAPP_NUMBER variable: direct tel: calling plus an

@@ -32,7 +32,7 @@ export function ConsultView({
           }}
         >
           <div className="w-2 h-2 rounded-full bg-[#dc2626] animate-pulse" />
-          <span className="text-xl font-bold">Emergency Care</span>
+          <span className="text-xl font-bold">FirstLink</span>
         </Link>
       </header>
 

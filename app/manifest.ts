@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // maskable 512 with safe-zone padding, standalone display.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Emergency Care — While Help Is on the Way",
-    short_name: "Emergency Care",
+    name: "FirstLink — Emergency Response",
+    short_name: "FirstLink",
     description:
       "Report an emergency, follow safe interim guidance, and track honest response status while professional help is arranged.",
     start_url: "/",

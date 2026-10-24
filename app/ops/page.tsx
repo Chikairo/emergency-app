@@ -22,7 +22,7 @@ export default async function OpsPage() {
             {user.email} is signed in, but this account does not have an authorized dispatch role.
           </p>
           <Link href="/" className="mt-5 inline-block font-bold text-[#275da8] underline">
-            Return to Emergency Care
+            Return to FirstLink
           </Link>
         </section>
       </main>

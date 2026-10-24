@@ -1,4 +1,4 @@
-# Emergency Care — While Help Is on the Way
+# FirstLink — Emergency Response
 
 Local-first emergency-response web app. Helps people report an emergency, follow
 clinically reviewed interim guidance, share/correct location, and track honest

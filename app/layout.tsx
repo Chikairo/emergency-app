@@ -18,12 +18,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Emergency Care",
+  title: "FirstLink",
   description: "Send an emergency alert and follow server-confirmed response updates.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Emergency Care",
+    title: "FirstLink",
     statusBarStyle: "black-translucent",
   },
   icons: {

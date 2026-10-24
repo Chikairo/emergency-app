@@ -57,7 +57,7 @@ export default function SignInPage() {
               ✚
             </div>
             <div>
-              <div className="font-black text-lg text-[#142b43]">Emergency Care</div>
+              <div className="font-black text-lg text-[#142b43]">FirstLink</div>
               <div className="text-[11px] font-medium text-[#718096]">Admin Portal</div>
             </div>
           </div>
@@ -71,7 +71,7 @@ export default function SignInPage() {
               ✚
             </div>
             <div>
-              <div className="font-black text-lg text-[#142b43]">Emergency Care</div>
+              <div className="font-black text-lg text-[#142b43]">FirstLink</div>
               <div className="text-[11px] font-medium text-[#718096]">Admin Portal</div>
             </div>
           </div>

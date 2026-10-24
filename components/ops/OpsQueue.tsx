@@ -325,7 +325,7 @@ export function OpsQueue({
         <aside className="hidden bg-[#142b43] p-5 text-[#dce7f2] lg:flex lg:flex-col">
           <Link href="/ops" className="mb-8 flex items-center gap-2 text-lg font-extrabold text-white">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ed343b] text-xl">✚</span>
-            Emergency Care
+            FirstLink
           </Link>
           <p className="mb-3 px-3 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#9bb0c5]">
             Operations

@@ -10,7 +10,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // stay server-side in backend environment variables.
 const config: CapacitorConfig = {
   appId: "com.emergencycare.app",
-  appName: "Emergency Care",
+  appName: "FirstLink",
   // Local fallback bundle for `cap sync` validation only. At runtime the
   // shell loads server.url below.
   webDir: "capacitor-web",

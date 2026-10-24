@@ -40,7 +40,7 @@ export default function Home() {
             ✚
           </div>
           <div className="min-w-0">
-            <div className="font-black text-lg text-[#142b43]">Emergency Care</div>
+            <div className="font-black text-lg text-[#142b43]">FirstLink</div>
             <div className="text-[10px] font-medium text-[#718096] sm:text-[11px]">
               One tap sends an emergency alert
             </div>
@@ -114,7 +114,7 @@ export default function Home() {
             <div className="relative flex min-h-[340px] flex-col items-center justify-center overflow-hidden rounded-[26px] border border-[#e7edf4] bg-white px-4 py-8 shadow-sm sm:min-h-[420px]">
               <div aria-hidden="true" className="absolute left-1/2 top-[-90px] h-[180px] w-[290px] -translate-x-1/2 rounded-b-full bg-[#fff0f0]" />
               <div className="relative z-10 text-center">
-                <div className="text-xl font-black text-[#142b43]">Emergency Care</div>
+                <div className="text-xl font-black text-[#142b43]">FirstLink</div>
                 <div className="mt-[2px] text-sm text-[#718096]">One tap to send an emergency alert</div>
                 <EmergencyStartButton />
               </div>
